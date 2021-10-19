@@ -212,11 +212,11 @@ def main():
 def trade(client):
 
     # predposledny uzavrety candle odtial info
-    previousEMA5 = 1.16100
-    previousEMA10 = 1.16100
-    previousEMA8 = 1.16437
-    previousEMA20 = 1.16462
-    signalMACD = 0.00026
+    previousEMA5 = 1.16378
+    previousEMA10 = 1.16452
+    previousEMA8 = 1.16412
+    previousEMA20 = 1.16449
+    signalMACD = 0.00013
 
     isBearish = False
     isBullish = False
