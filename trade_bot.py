@@ -212,11 +212,11 @@ def main():
 def trade(client):
 
     # predposledny uzavrety candle odtial info
-    previousEMA5 = 1.16378
-    previousEMA10 = 1.16452
-    previousEMA8 = 1.16412
-    previousEMA20 = 1.16449
-    signalMACD = 0.00013
+    previousEMA5 = 1.16402
+    previousEMA10 = 1.16416
+    previousEMA8 = 1.16406
+    previousEMA20 = 1.16430
+    signalMACD = -0.00024
 
     isBearish = False
     isBullish = False
@@ -225,9 +225,7 @@ def trade(client):
         # get symbol info
         symbolInfo = client.commandExecute('getSymbol', {'symbol' : 'EURUSD'})
         spread = symbolInfo["returnData"]["spreadRaw"]
-    
-        # get opened trades on specific account
-        #resp = client.commandExecute('getTrades', {'openedOnly' : True})
+
         chart = getChart(client, 30)
 
         openPrice = getOpenPrice(chart)
@@ -240,16 +238,15 @@ def trade(client):
         EMA20 = calculateEMA(closePrice, previousEMA20, 20)
 
         signalMACD = calculateMACD(EMA8, EMA20, signalMACD)
+        MACD = EMA8 - EMA20
 
         print("OPEN Price: ", openPrice)
         print("CLOSE Price: ", closePrice)
         print("EMA5: ", EMA5)
         print("EMA10: ", EMA10)
-        print("EMA8: ", EMA8)
-        print("EMA20: ", EMA20)
         print("Spread: ", spread * 10**4)
-        print("EMA8 - EMA20: ", EMA8 - EMA20)
-        print("SIGNAL: ", signalMACD)
+        print("MACD: ", MACD)
+        print("SIGNAL MACD: ", signalMACD)
 
         previousEMA5 = EMA5
         previousEMA10 = EMA10
@@ -263,7 +260,8 @@ def trade(client):
             elif isBullish:   #trend switched from bullish to bearish
                 isBullish = False      
                 isBearish = True
-                if spread < 1.7: # check spread
+                if signalMACD > MACD and spread < 1.7: # check spread and MACD check
+                    closeTrade(client, 0.04)     #close opened trade (if exists)
                     openTrade(client, 1, 0.04)   #open short position
                     print("OPENED SHORT POSITION!")
 
@@ -274,7 +272,8 @@ def trade(client):
             elif isBearish:   #trend switched from bearish to bullish
                 isBearish = False      
                 isBullish = True
-                if spread < 1.7: # check spread
+                if signalMACD < MACD and spread < 1.7: # check spread and MACD check
+                    closeTrade(client, 0.04)     #close opened trade (if exists)
                     openTrade(client, 0, 0.04)   #open long position
                     print("OPENED LONG POSITION!")
 
@@ -282,6 +281,16 @@ def trade(client):
         print("Is Bullish: ", isBullish)
         
         time.sleep(1800)
+
+
+def closeTrade(client, volume):
+    trades = client.commandExecute('getTrades', {'openedOnly' : True})
+    if(trades["returnData"]):
+        client.commandExecute('tradeTransaction', {"tradeTransInfo": { "order": trades["returnData"][0]["order"],
+                            "symbol": "EURUSD",
+                            "type": 2,
+                            "price": 1,
+                            "volume": 0.04}})
 
 
 def openTrade(client, command, volume):
