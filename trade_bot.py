@@ -8,7 +8,7 @@ import ssl
 from threading import Thread
 
 # set to true on debug environment only
-DEBUG = True
+DEBUG = False
 
 #default connection properites
 DEFAULT_XAPI_ADDRESS        = 'xapi.xtb.com'
@@ -212,11 +212,11 @@ def main():
 def trade(client):
 
     # predposledny uzavrety candle odtial info
-    previousEMA5 = 1.16402
-    previousEMA10 = 1.16416
-    previousEMA8 = 1.16406
-    previousEMA20 = 1.16430
-    signalMACD = -0.00024
+    previousEMA5 = 1.16374
+    previousEMA10 = 1.16400
+    previousEMA8 = 1.16385
+    previousEMA20 = 1.16416
+    signalMACD = -0.00031
 
     isBearish = False
     isBullish = False
