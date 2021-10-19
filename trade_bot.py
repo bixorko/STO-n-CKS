@@ -204,24 +204,110 @@ def main():
     # get ssId from login response
     ssid = loginResponse['streamSessionId']
     
-    # get symbol info
-    #resp = client.commandExecute('getSymbol', {'symbol' : 'EURUSD'})
-
-    # get opened trades on specific account
-    #resp = client.commandExecute('getTrades', {'openedOnly' : True})
-
-    # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
-    resp = client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": 0,
-                                    "customComment": "Some text",
-                                    "order": 0,
-                                    "symbol": "EURUSD",
-                                    "price": 1,
-                                    "type": 0,
-                                    "volume": 0.05}})
+    trade(client)
     
     # gracefully close RR socket
     client.disconnect()
+
+def trade(client):
+
+    to_sleep = 1680
+
+    previousEMA5 = 1.16100
+    previousEMA10 = 1.16100
+
+    isBearish = False
+    isBullish = False
+
+    while True:
+        # get symbol info
+        symbolInfo = client.commandExecute('getSymbol', {'symbol' : 'EURUSD'})
+        spread = symbolInfo["returnData"]["spreadRaw"]
     
+        # get opened trades on specific account
+        #resp = client.commandExecute('getTrades', {'openedOnly' : True})
+        chart = getChart(client, 30)
+
+        openPrice = getOpenPrice(chart)
+        closePrice = getClosePrice(chart)
+
+        EMA5 = calculateEMA(closePrice, previousEMA5, 5)
+        EMA10 = calculateEMA(openPrice, previousEMA10, 10)
+
+        print("OPEN Price: ", openPrice)
+        print("CLOSE Price: ", closePrice)
+        print("EMA5: ", EMA5)
+        print("EMA10: ", EMA10)
+        print("Spread: ", spread * 10**4)
+
+        previousEMA5 = EMA5
+        previousEMA10 = EMA10
+
+        if EMA5 < EMA10:   #bearish
+            if  not isBearish and not isBullish: # decide if the trend is bullish or bearish after first launch
+                isBearish = True
+            
+            elif isBullish:   #trend switched from bullish to bearish
+                isBullish = False      
+                isBearish = True
+                if spread < 1.7: # check spread
+                    openTrade(client, 1, 0.04)   #open short position
+                    print("OPENED SHORT POSITION!")
+
+        elif EMA5 > EMA10: #bullish
+            if  not isBearish and not isBullish: # decide if the trend is bullish or bearish after first launch
+                isBullish = True
+            
+            elif isBearish:   #trend switched from bearish to bullish
+                isBearish = False      
+                isBullish = True
+                if spread < 1.7: # check spread
+                    openTrade(client, 0, 0.04)   #open long position
+                    print("OPENED LONG POSITION!")
+
+        print("Is Bearish: ", isBearish)
+        print("Is Bullish: ", isBullish)
+        
+        time.sleep(1800)
+
+
+def openTrade(client, command, volume):
+    # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
+    return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
+                                        "customComment": "Some text",
+                                        "order": 0,
+                                        "symbol": "EURUSD",
+                                        "price": 1,
+                                        "type": 0,
+                                        "volume": volume}})
+
+
+def getChart(client, period):
+    return client.commandExecute('getChartLastRequest', 
+            {
+                'info': 
+                {
+                    "period": period,
+                    "start": int(time.time()-20000) * 1000,
+                    "symbol": "EURUSD"
+                }
+            })
+
+
+def getOpenPrice(chart):
+    return chart["returnData"]["rateInfos"][len(chart["returnData"]["rateInfos"])-2]["open"] / (10 ** chart["returnData"]["digits"])
+
+
+def getClosePrice(chart):
+    return chart["returnData"]["rateInfos"][len(chart["returnData"]["rateInfos"])-2]["open"] / (10 ** chart["returnData"]["digits"]) \
+        + (chart["returnData"]["rateInfos"][len(chart["returnData"]["rateInfos"])-2]["close"] / (10 ** chart["returnData"]["digits"]))
+
+
+def calculateEMA(currentPrice, previousEMA, n):
+    K = 2/(n+1)
+    EMA = K * (currentPrice - previousEMA) + previousEMA
+    return EMA
+
     
 if __name__ == "__main__":
     if len(argv) != 5:
