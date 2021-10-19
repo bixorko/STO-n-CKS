@@ -211,10 +211,12 @@ def main():
 
 def trade(client):
 
-    to_sleep = 1680
-
+    # predposledny uzavrety candle odtial info
     previousEMA5 = 1.16100
     previousEMA10 = 1.16100
+    previousEMA8 = 1.16437
+    previousEMA20 = 1.16462
+    signalMACD = 0.00026
 
     isBearish = False
     isBullish = False
@@ -234,14 +236,25 @@ def trade(client):
         EMA5 = calculateEMA(closePrice, previousEMA5, 5)
         EMA10 = calculateEMA(openPrice, previousEMA10, 10)
 
+        EMA8 = calculateEMA(closePrice, previousEMA8, 8)
+        EMA20 = calculateEMA(closePrice, previousEMA20, 20)
+
+        signalMACD = calculateMACD(EMA8, EMA20, signalMACD)
+
         print("OPEN Price: ", openPrice)
         print("CLOSE Price: ", closePrice)
         print("EMA5: ", EMA5)
         print("EMA10: ", EMA10)
+        print("EMA8: ", EMA8)
+        print("EMA20: ", EMA20)
         print("Spread: ", spread * 10**4)
+        print("EMA8 - EMA20: ", EMA8 - EMA20)
+        print("SIGNAL: ", signalMACD)
 
         previousEMA5 = EMA5
         previousEMA10 = EMA10
+        previousEMA8 = EMA8
+        previousEMA20 = EMA20
 
         if EMA5 < EMA10:   #bearish
             if  not isBearish and not isBullish: # decide if the trend is bullish or bearish after first launch
@@ -308,7 +321,11 @@ def calculateEMA(currentPrice, previousEMA, n):
     EMA = K * (currentPrice - previousEMA) + previousEMA
     return EMA
 
-    
+
+def calculateMACD(EMA8, EMA20, signal):
+    return ((EMA8 - EMA20) * (2/(9+1))) + (signal * (1-(2/(9+1))))
+
+
 if __name__ == "__main__":
     if len(argv) != 5:
         print("Run script as: python trade_bot.py [-id | --id <your account id>] [-p | --password <your account password>]!", file=sys.stderr)
