@@ -212,11 +212,11 @@ def main():
 def trade(client):
 
     # predposledny uzavrety candle odtial info
-    previousEMA5 = 1.16374
-    previousEMA10 = 1.16400
-    previousEMA8 = 1.16385
-    previousEMA20 = 1.16416
-    signalMACD = -0.00031
+    previousEMA5 = 1.16340
+    previousEMA10 = 1.16307
+    previousEMA8 = 1.16325
+    previousEMA20 = 1.16329
+    signalMACD = -0.00035
 
     isBearish = False
     isBullish = False
@@ -260,8 +260,8 @@ def trade(client):
             elif isBullish:   #trend switched from bullish to bearish
                 isBullish = False      
                 isBearish = True
+                closeTrade(client, 0.04)     #close opened trade (if exists)
                 if signalMACD > MACD and spread < 1.7: # check spread and MACD check
-                    closeTrade(client, 0.04)     #close opened trade (if exists)
                     openTrade(client, 1, 0.04)   #open short position
                     print("OPENED SHORT POSITION!")
 
@@ -272,8 +272,8 @@ def trade(client):
             elif isBearish:   #trend switched from bearish to bullish
                 isBearish = False      
                 isBullish = True
+                closeTrade(client, 0.04)     #close opened trade (if exists)
                 if signalMACD < MACD and spread < 1.7: # check spread and MACD check
-                    closeTrade(client, 0.04)     #close opened trade (if exists)
                     openTrade(client, 0, 0.04)   #open long position
                     print("OPENED LONG POSITION!")
 
