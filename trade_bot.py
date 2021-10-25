@@ -262,7 +262,7 @@ def trade(client):
                 isBearish = True
                 closeTrade(client, 0.04)     #close opened trade (if exists)
                 if signalMACD > MACD and spread < 1.7: # check spread and MACD check
-                    openTrade(client, 1, 0.04)   #open short position
+                    openTrade(client, 1, 0.04, openPrice, spread)   #open short position
                     print("OPENED SHORT POSITION!")
 
         elif EMA5 > EMA10: #bullish
@@ -274,11 +274,11 @@ def trade(client):
                 isBullish = True
                 closeTrade(client, 0.04)     #close opened trade (if exists)
                 if signalMACD < MACD and spread < 1.7: # check spread and MACD check
-                    openTrade(client, 0, 0.04)   #open long position
+                    openTrade(client, 0, 0.04, openPrice, spread)   #open long position
                     print("OPENED LONG POSITION!")
 
         print("Is Bearish: ", isBearish)
-        print("Is Bullish: ", isBullish)
+        print("Is Bullish: ", isBullish, "\n")
         
         time.sleep(1800)
 
@@ -293,13 +293,24 @@ def closeTrade(client, volume):
                             "volume": 0.04}})
 
 
-def openTrade(client, command, volume):
+def openTrade(client, command, volume, openPrice, spread):
+    #calculate TP and SL based on tactic
+    if command == 0:
+        stoploss = openPrice-0.002+spread
+        takeprofit = openPrice+0.002
+    else:
+        stoploss = openPrice+0.002+spread
+        takeprofit = openPrice-0.002
+    
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
                                         "customComment": "Some text",
                                         "order": 0,
                                         "symbol": "EURUSD",
                                         "price": 1,
+                                        "tp": takeprofit,
+                                        "sl": stoploss,
+                                        "offset": 200,
                                         "type": 0,
                                         "volume": volume}})
 
