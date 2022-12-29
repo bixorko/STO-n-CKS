@@ -220,12 +220,12 @@ def trade(client):
         symbol_info = client.commandExecute('getSymbol', {'symbol' : 'EURUSD'})
         spread = symbol_info["returnData"]["spreadRaw"]
 
-        chart = get_chart(client, 5)
+        chart = get_chart(client, 30)
 
         open_price = get_open_price(chart)
         close_price = get_close_price(chart)
 
-        ema_5, ema_10, macd, rsi = get_pair_indicators("EURUSD=X", "5m", "2d")
+        ema_5, ema_10, macd, rsi = get_pair_indicators("EURUSD=X", "30m", "4d")
 
         print("OPEN Price: ", open_price)
         print("CLOSE Price: ", close_price)
@@ -262,7 +262,7 @@ def trade(client):
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
         
-        time.sleep(300)
+        time.sleep(1800)
 
 
 def close_trade(client, volume):
