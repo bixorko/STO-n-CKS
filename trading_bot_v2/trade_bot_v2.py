@@ -292,7 +292,7 @@ def open_trade(client, command, volume, open_price):
                                         "price": 1,
                                         "tp": takeprofit,
                                         "sl": stoploss,
-                                        "offset": 200,
+                                        "offset": 0,
                                         "type": 0,
                                         "volume": volume}})
 
