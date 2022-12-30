@@ -189,6 +189,9 @@ def main():
     # enter your login credentials here
     userId = argv[2]
     password = argv[4]
+    xtb_pair = argv[6]
+    yahoo_pair = argv[8]
+    chart_interval = argv[10]
 
     # create & connect to RR socket
     client = APIClient()
@@ -205,27 +208,27 @@ def main():
     # get ssId from login response
     ssid = loginResponse['streamSessionId']
     
-    trade(client)
+    trade(client, xtb_pair, yahoo_pair, chart_interval)
     
     # gracefully close RR socket
     client.disconnect()
 
-def trade(client):
+def trade(client, xtb_pair, yahoo_pair, chart_interval):
 
     is_bearish = False
     is_bullish = False
 
     while True:
         # get symbol info
-        symbol_info = client.commandExecute('getSymbol', {'symbol' : 'EURUSD'})
+        symbol_info = client.commandExecute('getSymbol', {'symbol' : xtb_pair})
         spread = symbol_info["returnData"]["spreadRaw"]
 
-        chart = get_chart(client, 30)
+        chart = get_chart(client, 30, xtb_pair)
 
         open_price = get_open_price(chart)
         close_price = get_close_price(chart)
 
-        ema_5, ema_10, macd, rsi = get_pair_indicators("EURUSD=X", "30m", "4d")
+        ema_5, ema_10, macd, rsi = get_pair_indicators(yahoo_pair, chart_interval, "4d")
 
         print("OPEN Price: ", open_price)
         print("CLOSE Price: ", close_price)
@@ -242,9 +245,9 @@ def trade(client):
             elif is_bullish:   #trend switched from bullish to bearish
                 is_bullish = False      
                 is_bearish = True
-                close_trade(client, 0.04)     #close opened trade (if exists)
+                close_trade(client, 0.04, xtb_pair)     #close opened trade (if exists)
                 if macd < 0 and rsi < 50: # check spread and MACD check
-                    open_trade(client, 1, 0.04, close_price)   #open short position
+                    open_trade(client, 1, 0.04, close_price, xtb_pair)   #open short position
                     print("OPENED SHORT POSITION!")
 
         elif ema_5 > ema_10: #bullish
@@ -254,9 +257,9 @@ def trade(client):
             elif is_bearish:   #trend switched from bearish to bullish
                 is_bearish = False      
                 is_bullish = True
-                close_trade(client, 0.04)     #close opened trade (if exists)
+                close_trade(client, 0.04, xtb_pair)     #close opened trade (if exists)
                 if macd > 0 and rsi > 50: # check spread and MACD check
-                    open_trade(client, 0, 0.04, close_price)   #open long position
+                    open_trade(client, 0, 0.04, close_price, xtb_pair)   #open long position
                     print("OPENED LONG POSITION!")
 
         print("Is Bearish: ", is_bearish)
@@ -265,17 +268,17 @@ def trade(client):
         time.sleep(1800)
 
 
-def close_trade(client, volume):
+def close_trade(client, volume, xtb_pair):
     trades = client.commandExecute('getTrades', {'openedOnly' : True})
     if(trades["returnData"]):
         client.commandExecute('tradeTransaction', {"tradeTransInfo": { "order": trades["returnData"][0]["order"],
-                            "symbol": "EURUSD",
+                            "symbol": xtb_pair,
                             "type": 2,
                             "price": 1,
-                            "volume": 0.04}})
+                            "volume": volume}})
 
 
-def open_trade(client, command, volume, price):
+def open_trade(client, command, volume, price, xtb_pair):
     #calculate TP and SL based on tactic
     if command == 0:
         stoploss = price-0.0023
@@ -288,7 +291,7 @@ def open_trade(client, command, volume, price):
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
                                         "customComment": "Some text",
                                         "order": 0,
-                                        "symbol": "EURUSD",
+                                        "symbol": xtb_pair,
                                         "price": 1,
                                         "tp": takeprofit,
                                         "sl": stoploss,
@@ -318,14 +321,14 @@ def get_pair_indicators(pair, chart_interval, chart_history):
     return indicators['ema_5'], indicators['ema_10'], indicators['macd_h'], indicators['rsi']
 
 
-def get_chart(client, period):
+def get_chart(client, period, xtb_pair):
     return client.commandExecute('getChartLastRequest', 
             {
                 'info': 
                 {
                     "period": period,
                     "start": int(time.time()-20000) * 1000,
-                    "symbol": "EURUSD"
+                    "symbol": xtb_pair
                 }
             })
 
@@ -340,8 +343,8 @@ def get_close_price(chart):
 
 
 if __name__ == "__main__":
-    if len(argv) != 5:
-        print("Run script as: python trade_bot.py [--id <your account id>] [--password <your account password>]!", file=sys.stderr)
+    if len(argv) != 11:
+        print("Run script as: python trade_bot.py [--id <your account id>] [--password <your account password>] [--xtb <xtb pair name>] [--yf <yahoo finance pair name] [--chart <X(m/h/d/y)]", file=sys.stderr)
         exit(1)
     main()	
 
