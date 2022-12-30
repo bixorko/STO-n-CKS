@@ -279,10 +279,10 @@ def open_trade(client, command, volume, open_price):
     #calculate TP and SL based on tactic
     if command == 0:
         stoploss = open_price-0.002
-        takeprofit = open_price+0.0035
+        takeprofit = open_price+0.0027
     else:
         stoploss = open_price+0.002
-        takeprofit = open_price-0.0035
+        takeprofit = open_price-0.0027
     
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
