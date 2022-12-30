@@ -244,7 +244,7 @@ def trade(client):
                 is_bearish = True
                 close_trade(client, 0.04)     #close opened trade (if exists)
                 if macd < 0 and rsi < 50: # check spread and MACD check
-                    open_trade(client, 1, 0.04, open_price)   #open short position
+                    open_trade(client, 1, 0.04, close_price)   #open short position
                     print("OPENED SHORT POSITION!")
 
         elif ema_5 > ema_10: #bullish
@@ -256,7 +256,7 @@ def trade(client):
                 is_bullish = True
                 close_trade(client, 0.04)     #close opened trade (if exists)
                 if macd > 0 and rsi > 50: # check spread and MACD check
-                    open_trade(client, 0, 0.04, open_price)   #open long position
+                    open_trade(client, 0, 0.04, close_price)   #open long position
                     print("OPENED LONG POSITION!")
 
         print("Is Bearish: ", is_bearish)
@@ -275,14 +275,14 @@ def close_trade(client, volume):
                             "volume": 0.04}})
 
 
-def open_trade(client, command, volume, open_price):
+def open_trade(client, command, volume, price):
     #calculate TP and SL based on tactic
     if command == 0:
-        stoploss = open_price-0.002
-        takeprofit = open_price+0.0027
+        stoploss = price-0.0023
+        takeprofit = price+0.0027
     else:
-        stoploss = open_price+0.002
-        takeprofit = open_price-0.0027
+        stoploss = price+0.0023
+        takeprofit = price-0.0027
     
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
