@@ -327,7 +327,7 @@ def get_chart(client, period, xtb_pair):
                 'info': 
                 {
                     "period": period,
-                    "start": int(time.time()-20000) * 1000,
+                    "start": int(time.time()-180000) * 1000,
                     "symbol": xtb_pair
                 }
             })
