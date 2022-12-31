@@ -228,7 +228,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval):
         open_price = get_open_price(chart)
         close_price = get_close_price(chart)
 
-        ema_5, ema_10, macd, rsi = get_pair_indicators(yahoo_pair, chart_interval, "4d")
+        ema_5, ema_10, macd, rsi = get_pair_indicators(yahoo_pair, chart_interval, "2d")
 
         print("OPEN Price: ", open_price)
         print("CLOSE Price: ", close_price)
