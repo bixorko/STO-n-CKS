@@ -245,11 +245,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval):
             elif is_bullish:   #trend switched from bullish to bearish
                 is_bullish = False      
                 is_bearish = True
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.04, xtb_pair)     #close opened trade (if exists)
                 if macd < 0: # check spread and MACD check
-                    open_trade(client, 1, 0.02, close_price, xtb_pair, 0)   #open short position
-                    open_trade(client, 1, 0.02, close_price, xtb_pair, 1)   #open short position
+                    open_trade(client, 1, 0.04, close_price, xtb_pair)   #open short position
                     print("OPENED SHORT POSITION!")
 
         elif ema_5 > ema_10: #bullish
@@ -259,11 +257,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval):
             elif is_bearish:   #trend switched from bearish to bullish
                 is_bearish = False      
                 is_bullish = True
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.04, xtb_pair)     #close opened trade (if exists)
                 if macd > 0: # check spread and MACD check
-                    open_trade(client, 0, 0.02, close_price, xtb_pair, 0)   #open long position
-                    open_trade(client, 0, 0.02, close_price, xtb_pair, 1)   #open long position
+                    open_trade(client, 0, 0.04, close_price, xtb_pair)   #open long position
                     print("OPENED LONG POSITION!")
 
         print("Is Bearish: ", is_bearish)
@@ -282,21 +278,14 @@ def close_trade(client, volume, xtb_pair):
                             "volume": volume}})
 
 
-def open_trade(client, command, volume, price, xtb_pair, without_tp):
+def open_trade(client, command, volume, price, xtb_pair):
     # calculate TP and SL based on tactic
     if command == 0:
         stoploss = price-0.0025
-        takeprofit = price+0.0035
-        offset = 0
+        takeprofit = price+0.0030
     else:
         stoploss = price+0.0025
-        takeprofit = price-0.0035
-        offset = 0
-
-    # for second trade which will be opened for longer term without take profit and stop loss edited to break even after TP on first trade 
-    if without_tp:
-       takeprofit = 0
-       offset = 230
+        takeprofit = price-0.0030
     
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
@@ -306,7 +295,7 @@ def open_trade(client, command, volume, price, xtb_pair, without_tp):
                                         "price": 1,
                                         "tp": takeprofit,
                                         "sl": stoploss,
-                                        "offset": offset,
+                                        "offset": 0,
                                         "type": 0,
                                         "volume": volume}})
 
