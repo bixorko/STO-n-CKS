@@ -281,11 +281,11 @@ def close_trade(client, volume, xtb_pair):
 def open_trade(client, command, volume, price, xtb_pair):
     # calculate TP and SL based on tactic
     if command == 0:
-        stoploss = price-0.0025
-        takeprofit = price+0.0030
+        stoploss = round(price-0.0025, 5)
+        takeprofit = round(price+0.0030, 5)
     else:
-        stoploss = price+0.0025
-        takeprofit = price-0.0030
+        stoploss = round(price+0.0025, 5)
+        takeprofit = round(price-0.0030, 5)
     
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
