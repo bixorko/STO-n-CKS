@@ -285,12 +285,12 @@ def close_trade(client, volume, xtb_pair):
 def open_trade(client, command, volume, price, xtb_pair, without_tp):
     # calculate TP and SL based on tactic
     if command == 0:
-        stoploss = price-0.0023
-        takeprofit = price+0.0027
+        stoploss = price-0.0025
+        takeprofit = price+0.0035
         offset = 0
     else:
-        stoploss = price+0.0023
-        takeprofit = price-0.0027
+        stoploss = price+0.0025
+        takeprofit = price-0.0035
         offset = 0
 
     # for second trade which will be opened for longer term without take profit and stop loss edited to break even after TP on first trade 
