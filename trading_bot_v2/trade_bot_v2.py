@@ -265,7 +265,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval):
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
         
-        keep_alive()
+        keep_alive(client)
 
 
 def keep_alive(client):
