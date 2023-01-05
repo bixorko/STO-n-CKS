@@ -7,6 +7,8 @@ import time
 import ssl
 import yfinance as yf
 import talib as ta
+from display_resources.lib.waveshare_OLED import OLED_1in5
+from PIL import Image, ImageDraw, ImageFont
 
 # set to true on debug environment only
 DEBUG = False
@@ -192,6 +194,11 @@ def main():
     xtb_pair = argv[6]
     yahoo_pair = argv[8]
     chart_interval = argv[10]
+    
+    arg_display = argv[12]
+    with_display = False
+    if arg_display == "on":
+        with_display = True
 
     # create & connect to RR socket
     client = APIClient()
@@ -208,12 +215,12 @@ def main():
     # get ssId from login response
     ssid = loginResponse['streamSessionId']
     
-    trade(client, xtb_pair, yahoo_pair, chart_interval)
+    trade(client, xtb_pair, yahoo_pair, chart_interval, with_display)
     
     # gracefully close RR socket
     client.disconnect()
 
-def trade(client, xtb_pair, yahoo_pair, chart_interval):
+def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
 
     is_bearish = False
     is_bullish = False
@@ -265,7 +272,46 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval):
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
         
+        if is_bearish:
+            trend = 'Bearish'
+        else:
+            trend = 'Bullish'
+            
+        if with_display:
+            update_display(round(open_price, 5), round(close_price, 5), round(ema_5, 5), round(ema_10, 5), round(macd, 5), round(rsi, 5), spread * 10**4, trend)
+        
         keep_alive(client)
+        
+        
+def update_display(open_price, close_price, ema_5, ema_10, macd, rsi, spread, trend):
+    disp = OLED_1in5.OLED_1in5()
+
+    # Initialize library.
+    disp.Init()
+    # Clear display.
+    disp.clear()
+    
+
+    # Create blank image for drawing.
+    image1 = Image.new('L', (disp.width, disp.height), 0)
+    draw = ImageDraw.Draw(image1)
+    font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
+    
+    draw.line([(0,0),(127,0)], fill = 15)
+    draw.line([(0,0),(0,127)], fill = 15)
+    draw.line([(0,127),(127,127)], fill = 15)
+    draw.line([(127,0),(127,127)], fill = 15)
+
+    draw.text((2,0),   f'OPEN  Price: {open_price}', font = font, fill = 1)
+    draw.text((2,16),  f'CLOSE Price: {close_price}', font = font, fill = 1)
+    draw.text((2,32),  f'EMA5: {ema_5}', font = font, fill = 1)
+    draw.text((2,48),  f'EMA10: {ema_10}', font = font, fill = 1)
+    draw.text((2,64),  f'MACD: {macd}', font = font, fill = 1)
+    draw.text((2,80),  f'RSI: {rsi}', font = font, fill = 1)
+    draw.text((2,96),  f'Spread: {spread}', font = font, fill = 1)
+    draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
+    image1 = image1.rotate(180)
+    disp.ShowImage(disp.getbuffer(image1))
 
 
 def keep_alive(client):
@@ -349,8 +395,8 @@ def get_close_price(chart):
 
 
 if __name__ == "__main__":
-    if len(argv) != 11:
-        print("Run script as: python trade_bot.py [--id <your account id>] [--password <your account password>] [--xtb <xtb pair name>] [--yf <yahoo finance pair name] [--chart <X(m/h/d/y)]", file=sys.stderr)
+    if len(argv) != 13:
+        print("Run script as: python trade_bot.py [--id <your account id>] [--password <your account password>] [--xtb <xtb pair name>] [--yf <yahoo finance pair name] [--chart <X(m/h/d/y)] [--display (on/off)]", file=sys.stderr)
         exit(1)
     main()	
 
