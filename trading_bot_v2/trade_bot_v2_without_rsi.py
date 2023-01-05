@@ -265,7 +265,13 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval):
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
         
-        time.sleep(1800)
+        keep_alive()
+
+
+def keep_alive(client):
+    for _ in range(6):
+        client.commandExecute('ping')
+        time.sleep(300)
 
 
 def close_trade(client, volume, xtb_pair):
