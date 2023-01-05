@@ -315,9 +315,9 @@ def update_display(open_price, close_price, ema_5, ema_10, macd, rsi, spread, tr
 
 
 def keep_alive(client):
-    for _ in range(6):
+    for _ in range(15):
         client.commandExecute('ping')
-        time.sleep(300)
+        time.sleep(120)
 
 
 def close_trade(client, volume, xtb_pair):
