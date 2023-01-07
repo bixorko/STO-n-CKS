@@ -252,9 +252,11 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
             elif is_bullish:   #trend switched from bullish to bearish
                 is_bullish = False      
                 is_bearish = True
-                close_trade(client, 0.04, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd < 0: # check spread and MACD check
-                    open_trade(client, 1, 0.04, close_price, xtb_pair)   #open short position
+                    open_trade(client, 1, 0.02, xtb_pair, False)   #open short position
+                    open_trade(client, 1, 0.02, xtb_pair, True)   #open short position
                     print("OPENED SHORT POSITION!")
 
         elif ema_5 > ema_10: #bullish
@@ -264,9 +266,11 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
             elif is_bearish:   #trend switched from bearish to bullish
                 is_bearish = False      
                 is_bullish = True
-                close_trade(client, 0.04, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd > 0: # check spread and MACD check
-                    open_trade(client, 0, 0.04, close_price, xtb_pair)   #open long position
+                    open_trade(client, 0, 0.02, xtb_pair, False)   #open long position
+                    open_trade(client, 0, 0.02, xtb_pair, True)   #open long position
                     print("OPENED LONG POSITION!")
 
         print("Is Bearish: ", is_bearish)
@@ -280,7 +284,8 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
         if with_display:
             update_display(round(open_price, 5), round(close_price, 5), round(ema_5, 5), round(ema_10, 5), round(macd, 5), round(rsi, 5), spread * 10**4, trend)
         
-        keep_alive(client)
+        keep_alive(client, xtb_pair)
+        
         
         
 def update_display(open_price, close_price, ema_5, ema_10, macd, rsi, spread, trend):
@@ -313,11 +318,43 @@ def update_display(open_price, close_price, ema_5, ema_10, macd, rsi, spread, tr
     image1 = image1.rotate(180)
     disp.ShowImage(disp.getbuffer(image1))
 
+# kazdy minutu sa spytat ci pocet tradov == 1, ak ano, tak to znamena, ze jeden trade je na take profit
+# a musime editnut stoploss ostavajuceho tradu na 0e aby ten trade uz nikdy neprerobil
+# toto nizsie fnuguje -> ale pozor treba takenut order z responsu getTrades a nie z toho co vrati ten resposne ked sa trade vytvori
+# amen
+        
+# {
+#     "command": "tradeTransaction",
+#     "arguments": {
+#         "tradeTransInfo": {
+#             "order": 458056969,
+#             "price": 1.4,
+#             "sl": 0,
+#             "tp": 17200,
+#             "symbol": "BITCOIN",
+#             "type": 3,
+#             "volume": 0.1
+#         }
+#     }
+# }
 
-def keep_alive(client):
-    for _ in range(6):
+def keep_alive(client, xtb_pair):
+    hit_take_profit = False
+    for _ in range(30):
+        if (len(client.commandExecute('getTrades', {'openedOnly': True})['returnData']) == 1) and not hit_take_profit:
+            active_trade = client.commandExecute('getTrades', {'openedOnly': True})['returnData'][0]
+            new_sl = active_trade['open_price']
+            order = active_trade['order']
+            client.commandExecute('tradeTransaction', {"tradeTransInfo": {"order": order,
+                                        "price": 1,
+                                        "sl": new_sl,
+                                        "tp": 0,
+                                        "symbol": xtb_pair,
+                                        "type": 3,
+                                        "volume": 0.02}})
+            hit_take_profit = True
         client.commandExecute('ping')
-        time.sleep(300)
+        time.sleep(60)
 
 
 def close_trade(client, volume, xtb_pair):
@@ -330,14 +367,19 @@ def close_trade(client, volume, xtb_pair):
                             "volume": volume}})
 
 
-def open_trade(client, command, volume, price, xtb_pair):
+def open_trade(client, command, volume, xtb_pair, without_tp):
     # calculate TP and SL based on tactic
     if command == 0:
+        price = client.commandExecute('getSymbol', {"symbol": xtb_pair})["returnData"]["ask"]
         stoploss = round(price-0.0025, 5)
         takeprofit = round(price+0.0030, 5)
     else:
+        price = client.commandExecute('getSymbol', {"symbol": xtb_pair})["returnData"]["bid"]
         stoploss = round(price+0.0025, 5)
         takeprofit = round(price-0.0030, 5)
+        
+    if without_tp:
+        takeprofit = 0
     
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
     return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
