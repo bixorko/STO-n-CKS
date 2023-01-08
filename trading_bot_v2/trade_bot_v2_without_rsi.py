@@ -220,8 +220,13 @@ def main():
     # gracefully close RR socket
     client.disconnect()
 
-def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
 
+def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
+    disp = OLED_1in5.OLED_1in5()
+    disp.Init()
+    disp.clear()
+    font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
+    
     is_bearish = False
     is_bullish = False
 
@@ -254,7 +259,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
                 is_bearish = True
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                if macd < 0: # check spread and MACD check
+                if macd < 0 and rsi < 50: # check spread and MACD check
                     open_trade(client, 1, 0.02, xtb_pair, False)   #open short position
                     open_trade(client, 1, 0.02, xtb_pair, True)   #open short position
                     print("OPENED SHORT POSITION!")
@@ -268,40 +273,28 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
                 is_bullish = True
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                if macd > 0: # check spread and MACD check
+                if macd > 0 and rsi > 50: # check spread and MACD check
                     open_trade(client, 0, 0.02, xtb_pair, False)   #open long position
                     open_trade(client, 0, 0.02, xtb_pair, True)   #open long position
                     print("OPENED LONG POSITION!")
 
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
-        
+
         if is_bearish:
             trend = 'Bearish'
         else:
             trend = 'Bullish'
             
         if with_display:
-            update_display(round(open_price, 5), round(close_price, 5), round(ema_5, 5), round(ema_10, 5), round(macd, 5), round(rsi, 5), spread * 10**4, trend)
-        
+            update_display(disp, font, round(open_price, 5), round(close_price, 5), round(ema_5, 5), round(ema_10, 5), round(macd, 5), round(rsi, 5), spread * 10**4, trend)
+		
         keep_alive(client, xtb_pair)
         
         
-        
-def update_display(open_price, close_price, ema_5, ema_10, macd, rsi, spread, trend):
-    disp = OLED_1in5.OLED_1in5()
-
-    # Initialize library.
-    disp.Init()
-    # Clear display.
-    disp.clear()
-    
-
-    # Create blank image for drawing.
+def update_display(disp, font, open_price, close_price, ema_5, ema_10, macd, rsi, spread, trend):
     image1 = Image.new('L', (disp.width, disp.height), 0)
     draw = ImageDraw.Draw(image1)
-    font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
-    
     draw.line([(0,0),(127,0)], fill = 15)
     draw.line([(0,0),(0,127)], fill = 15)
     draw.line([(0,127),(127,127)], fill = 15)
