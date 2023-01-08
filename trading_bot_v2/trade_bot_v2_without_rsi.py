@@ -259,7 +259,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
                 is_bearish = True
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                if macd < 0 and rsi < 50: # check spread and MACD check
+                if macd < 0: # check spread and MACD check
                     open_trade(client, 1, 0.02, xtb_pair, False)   #open short position
                     open_trade(client, 1, 0.02, xtb_pair, True)   #open short position
                     print("OPENED SHORT POSITION!")
@@ -273,7 +273,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
                 is_bullish = True
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                if macd > 0 and rsi > 50: # check spread and MACD check
+                if macd > 0: # check spread and MACD check
                     open_trade(client, 0, 0.02, xtb_pair, False)   #open long position
                     open_trade(client, 0, 0.02, xtb_pair, True)   #open long position
                     print("OPENED LONG POSITION!")
