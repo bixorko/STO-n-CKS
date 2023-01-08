@@ -16,30 +16,31 @@ is_bullish = True
 
 
 def update_display(disp, font):
-    if is_bearish:
-        trend = 'Bearish'
-    else:
-        trend = 'Bullish'
-        
-    disp.clear()
-    image1 = Image.new('L', (disp.width, disp.height), 0)
-    draw = ImageDraw.Draw(image1)
-    draw.line([(0,0),(127,0)], fill = 15)
-    draw.line([(0,0),(0,127)], fill = 15)
-    draw.line([(0,127),(127,127)], fill = 15)
-    draw.line([(127,0),(127,127)], fill = 15)
+    while(True):
+        if is_bearish:
+            trend = 'Bearish'
+        else:
+            trend = 'Bullish'
+            
+        disp.clear()
+        image1 = Image.new('L', (disp.width, disp.height), 0)
+        draw = ImageDraw.Draw(image1)
+        draw.line([(0,0),(127,0)], fill = 15)
+        draw.line([(0,0),(0,127)], fill = 15)
+        draw.line([(0,127),(127,127)], fill = 15)
+        draw.line([(127,0),(127,127)], fill = 15)
 
-    draw.text((2,0),   f'OPEN  Price: {round(open_price, 5)}', font = font, fill = 1)
-    draw.text((2,16),  f'CLOSE Price: {round(close_price, 5)}', font = font, fill = 1)
-    draw.text((2,32),  f'EMA5: {round(ema_5, 5)}', font = font, fill = 1)
-    draw.text((2,48),  f'EMA10: {round(ema_10, 5)}', font = font, fill = 1)
-    draw.text((2,64),  f'MACD: {round(macd, 5)}', font = font, fill = 1)
-    draw.text((2,80),  f'RSI: {round(rsi, 5)}', font = font, fill = 1)
-    draw.text((2,96),  f'Spread: {round(spread, 2)}', font = font, fill = 1)
-    draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
-    image1 = image1.rotate(180)
-    disp.ShowImage(disp.getbuffer(image1))
-    sleep(5)
+        draw.text((2,0),   f'OPEN  Price: {round(open_price, 5)}', font = font, fill = 1)
+        draw.text((2,16),  f'CLOSE Price: {round(close_price, 5)}', font = font, fill = 1)
+        draw.text((2,32),  f'EMA5: {round(ema_5, 5)}', font = font, fill = 1)
+        draw.text((2,48),  f'EMA10: {round(ema_10, 5)}', font = font, fill = 1)
+        draw.text((2,64),  f'MACD: {round(macd, 5)}', font = font, fill = 1)
+        draw.text((2,80),  f'RSI: {round(rsi, 5)}', font = font, fill = 1)
+        draw.text((2,96),  f'Spread: {round(spread, 2)}', font = font, fill = 1)
+        draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
+        image1 = image1.rotate(180)
+        disp.ShowImage(disp.getbuffer(image1))
+        sleep(5)
 
  
 disp = OLED_1in5.OLED_1in5()
