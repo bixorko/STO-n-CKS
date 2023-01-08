@@ -244,7 +244,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
     while True:
         # get symbol info
         symbol_info = client.commandExecute('getSymbol', {'symbol' : xtb_pair})
-        spread = symbol_info["returnData"]["spreadRaw"]
+        spread = (symbol_info["returnData"]["spreadRaw"]) * 10**4
 
         chart = get_chart(client, 30, xtb_pair)
 
@@ -257,7 +257,7 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
         print("CLOSE Price: ", close_price)
         print("EMA5: ", ema_5)
         print("EMA10: ", ema_10)
-        print("Spread: ", spread * 10**4)
+        print("Spread: ", spread)
         print("MACD: ", macd)
         print("RSI: ", rsi)
 
