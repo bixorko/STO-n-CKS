@@ -238,6 +238,8 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
     disp.Init()
     font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
     create_thread = True
+    
+    global open_price, close_price, ema_5, ema_10, macd, rsi, spread, is_bearish, is_bullish
 
     while True:
         # get symbol info
