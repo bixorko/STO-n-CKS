@@ -9,6 +9,7 @@ import yfinance as yf
 import talib as ta
 from display_resources.lib.waveshare_OLED import OLED_1in5
 from PIL import Image, ImageDraw, ImageFont
+from threading import Thread
 
 # set to true on debug environment only
 DEBUG = False
@@ -219,16 +220,24 @@ def main():
     
     # gracefully close RR socket
     client.disconnect()
+    
+# global variables for spearate display thread
+open_price = 0.0
+close_price = 0.0
+ema_5 = 0.0
+ema_10 = 0.0
+macd = 0.0
+rsi = 0.0
+spread = 0.0
+is_bearish = False
+is_bullish = False
 
 
 def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
     disp = OLED_1in5.OLED_1in5()
     disp.Init()
-    disp.clear()
     font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
-    
-    is_bearish = False
-    is_bullish = False
+    create_thread = True
 
     while True:
         # get symbol info
@@ -280,36 +289,41 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
 
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
-
+            
+        if create_thread and with_display:
+            thread = Thread(target=update_display, args=(disp, font), daemon=True)
+            thread.start()
+            create_thread = False
+		
+        keep_alive(client, xtb_pair)
+        
+        
+def update_display(disp, font):
+    while(True):
         if is_bearish:
             trend = 'Bearish'
         else:
             trend = 'Bullish'
             
-        if with_display:
-            update_display(disp, font, round(open_price, 5), round(close_price, 5), round(ema_5, 5), round(ema_10, 5), round(macd, 5), round(rsi, 5), spread * 10**4, trend)
-		
-        keep_alive(client, xtb_pair)
-        
-        
-def update_display(disp, font, open_price, close_price, ema_5, ema_10, macd, rsi, spread, trend):
-    image1 = Image.new('L', (disp.width, disp.height), 0)
-    draw = ImageDraw.Draw(image1)
-    draw.line([(0,0),(127,0)], fill = 15)
-    draw.line([(0,0),(0,127)], fill = 15)
-    draw.line([(0,127),(127,127)], fill = 15)
-    draw.line([(127,0),(127,127)], fill = 15)
+        disp.clear()
+        image1 = Image.new('L', (disp.width, disp.height), 0)
+        draw = ImageDraw.Draw(image1)
+        draw.line([(0,0),(127,0)], fill = 15)
+        draw.line([(0,0),(0,127)], fill = 15)
+        draw.line([(0,127),(127,127)], fill = 15)
+        draw.line([(127,0),(127,127)], fill = 15)
 
-    draw.text((2,0),   f'OPEN  Price: {open_price}', font = font, fill = 1)
-    draw.text((2,16),  f'CLOSE Price: {close_price}', font = font, fill = 1)
-    draw.text((2,32),  f'EMA5: {ema_5}', font = font, fill = 1)
-    draw.text((2,48),  f'EMA10: {ema_10}', font = font, fill = 1)
-    draw.text((2,64),  f'MACD: {macd}', font = font, fill = 1)
-    draw.text((2,80),  f'RSI: {rsi}', font = font, fill = 1)
-    draw.text((2,96),  f'Spread: {spread}', font = font, fill = 1)
-    draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
-    image1 = image1.rotate(180)
-    disp.ShowImage(disp.getbuffer(image1))
+        draw.text((2,0),   f'OPEN  Price: {round(open_price, 5)}', font = font, fill = 1)
+        draw.text((2,16),  f'CLOSE Price: {round(close_price, 5)}', font = font, fill = 1)
+        draw.text((2,32),  f'EMA5: {round(ema_5, 5)}', font = font, fill = 1)
+        draw.text((2,48),  f'EMA10: {round(ema_10, 5)}', font = font, fill = 1)
+        draw.text((2,64),  f'MACD: {round(macd, 5)}', font = font, fill = 1)
+        draw.text((2,80),  f'RSI: {round(rsi, 5)}', font = font, fill = 1)
+        draw.text((2,96),  f'Spread: {round(spread, 2)}', font = font, fill = 1)
+        draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
+        image1 = image1.rotate(180)
+        disp.ShowImage(disp.getbuffer(image1))
+        time.sleep(1800)
 
 # kazdy minutu sa spytat ci pocet tradov == 1, ak ano, tak to znamena, ze jeden trade je na take profit
 # a musime editnut stoploss ostavajuceho tradu na 0e aby ten trade uz nikdy neprerobil
@@ -347,7 +361,7 @@ def keep_alive(client, xtb_pair):
                                         "volume": 0.02}})
             hit_take_profit = True
         client.commandExecute('ping')
-        time.sleep(59.9665)
+        time.sleep(60)
 
 
 def close_trade(client, volume, xtb_pair):
