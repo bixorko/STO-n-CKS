@@ -396,16 +396,16 @@ def open_trade(client, command, volume, xtb_pair, without_tp):
         takeprofit = 0
     
     # open transaction - arguments based on http://developers.xstore.pro/documentation/#tradeTransaction
-    return client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
-                                        "customComment": "Some text",
-                                        "order": 0,
-                                        "symbol": xtb_pair,
-                                        "price": 1,
-                                        "tp": takeprofit,
-                                        "sl": stoploss,
-                                        "offset": 0,
-                                        "type": 0,
-                                        "volume": volume}})
+    client.commandExecute('tradeTransaction', {"tradeTransInfo": { "cmd": command,
+                                    "customComment": "Some text",
+                                    "order": 0,
+                                    "symbol": xtb_pair,
+                                    "price": 1,
+                                    "tp": takeprofit,
+                                    "sl": stoploss,
+                                    "offset": 0,
+                                    "type": 0,
+                                    "volume": volume}})
 
 
 def get_pair_indicators(pair, chart_interval, chart_history):
