@@ -10,6 +10,7 @@ import talib as ta
 from display_resources.lib.waveshare_OLED import OLED_1in5
 from PIL import Image, ImageDraw, ImageFont
 from threading import Thread
+import pause
 
 # set to true on debug environment only
 DEBUG = False
@@ -231,6 +232,7 @@ rsi = 0.0
 spread = 0.0
 is_bearish = False
 is_bullish = False
+start_time = int(time.time())
 
 
 def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
@@ -325,7 +327,7 @@ def update_display(disp, font):
         draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
         image1 = image1.rotate(180)
         disp.ShowImage(disp.getbuffer(image1))
-        time.sleep(1800)
+        pause.until(start_time + 1810)
 
 # kazdy minutu sa spytat ci pocet tradov == 1, ak ano, tak to znamena, ze jeden trade je na take profit
 # a musime editnut stoploss ostavajuceho tradu na 0e aby ten trade uz nikdy neprerobil
@@ -349,6 +351,8 @@ def update_display(disp, font):
 
 def keep_alive(client, xtb_pair):
     hit_take_profit = False
+    global start_time
+    
     for _ in range(30):
         if (len(client.commandExecute('getTrades', {'openedOnly': True})['returnData']) == 1) and not hit_take_profit:
             active_trade = client.commandExecute('getTrades', {'openedOnly': True})['returnData'][0]
@@ -363,7 +367,8 @@ def keep_alive(client, xtb_pair):
                                         "volume": 0.02}})
             hit_take_profit = True
         client.commandExecute('ping')
-        time.sleep(60)
+        start_time += 60
+        pause.until(start_time)
 
 
 def close_trade(client, volume, xtb_pair):
