@@ -233,6 +233,7 @@ spread = 0.0
 is_bearish = False
 is_bullish = False
 start_time = int(time.time())
+display_time = int(time.time()) + 10
 
 
 def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
@@ -303,6 +304,8 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
         
         
 def update_display(disp, font):
+    global display_time
+    
     while(True):
         if is_bearish:
             trend = 'Bearish'
@@ -327,7 +330,8 @@ def update_display(disp, font):
         draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
         image1 = image1.rotate(180)
         disp.ShowImage(disp.getbuffer(image1))
-        pause.until(start_time + 1810)
+        display_time += 1800
+        pause.until(display_time)
 
 # kazdy minutu sa spytat ci pocet tradov == 1, ak ano, tak to znamena, ze jeden trade je na take profit
 # a musime editnut stoploss ostavajuceho tradu na 0e aby ten trade uz nikdy neprerobil
