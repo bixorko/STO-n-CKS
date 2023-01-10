@@ -359,6 +359,8 @@ def keep_alive(client, xtb_pair):
     hit_take_profit = False
     global start_time
     
+    time.sleep(12) #sync time
+    
     for _ in range(30):
         if (len(client.commandExecute('getTrades', {'openedOnly': True})['returnData']) == 1) and not hit_take_profit:
             active_trade = client.commandExecute('getTrades', {'openedOnly': True})['returnData'][0]
