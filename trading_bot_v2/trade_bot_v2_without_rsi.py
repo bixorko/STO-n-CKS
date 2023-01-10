@@ -271,8 +271,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
             elif is_bullish:   #trend switched from bullish to bearish
                 is_bullish = False      
                 is_bearish = True
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                num_of_active_trades = len(client.commandExecute('getTrades', {'openedOnly': True})['returnData'])
+                for _ in range(num_of_active_trades):
+                    close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd < 0: # check spread and MACD check
                     open_trade(client, 1, 0.02, xtb_pair, False)   #open short position
                     open_trade(client, 1, 0.02, xtb_pair, True)   #open short position
@@ -285,8 +286,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
             elif is_bearish:   #trend switched from bearish to bullish
                 is_bearish = False      
                 is_bullish = True
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
-                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                num_of_active_trades = len(client.commandExecute('getTrades', {'openedOnly': True})['returnData'])
+                for _ in range(num_of_active_trades):
+                    close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd > 0: # check spread and MACD check
                     open_trade(client, 0, 0.02, xtb_pair, False)   #open long position
                     open_trade(client, 0, 0.02, xtb_pair, True)   #open long position
