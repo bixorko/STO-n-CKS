@@ -271,11 +271,11 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
             elif is_bullish:   #trend switched from bullish to bearish
                 is_bullish = False      
                 is_bearish = True
-                num_of_active_trades = len(client.commandExecute('getTrades', {'openedOnly': True})['returnData'])
-                for _ in range(num_of_active_trades):
-                    close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd < 0 and rsi < 50: # check spread and MACD check
+                    time.sleep(5)
                     open_trade(client, 1, 0.02, xtb_pair, False)   #open short position
+                    time.sleep(5)
                     open_trade(client, 1, 0.02, xtb_pair, True)   #open short position
                     print("OPENED SHORT POSITION!")
 
@@ -286,11 +286,11 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
             elif is_bearish:   #trend switched from bearish to bullish
                 is_bearish = False      
                 is_bullish = True
-                num_of_active_trades = len(client.commandExecute('getTrades', {'openedOnly': True})['returnData'])
-                for _ in range(num_of_active_trades):
-                    close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
+                close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd > 0 and rsi > 50: # check spread and MACD check
+                    time.sleep(5)
                     open_trade(client, 0, 0.02, xtb_pair, False)   #open long position
+                    time.sleep(5)
                     open_trade(client, 0, 0.02, xtb_pair, True)   #open long position
                     print("OPENED LONG POSITION!")
 
@@ -359,9 +359,9 @@ def keep_alive(client, xtb_pair):
     hit_take_profit = False
     global start_time
     
-    time.sleep(12) #sync time
-    
     for _ in range(30):
+        start_time += 60
+        pause.until(start_time)
         if (len(client.commandExecute('getTrades', {'openedOnly': True})['returnData']) == 1) and not hit_take_profit:
             active_trade = client.commandExecute('getTrades', {'openedOnly': True})['returnData'][0]
             new_sl = active_trade['open_price']
@@ -375,18 +375,28 @@ def keep_alive(client, xtb_pair):
                                         "volume": 0.02}})
             hit_take_profit = True
         client.commandExecute('ping')
-        start_time += 60
-        pause.until(start_time)
 
 
 def close_trade(client, volume, xtb_pair):
     trades = client.commandExecute('getTrades', {'openedOnly' : True})
     if(trades["returnData"]):
-        client.commandExecute('tradeTransaction', {"tradeTransInfo": { "order": trades["returnData"][0]["order"],
-                            "symbol": xtb_pair,
-                            "type": 2,
-                            "price": 1,
-                            "volume": volume}})
+        try:
+            client.commandExecute('tradeTransaction', {"tradeTransInfo": { "order": trades["returnData"][0]["order"],
+                                "symbol": xtb_pair,
+                                "type": 2,
+                                "price": 1,
+                                "volume": volume}})
+        except:
+            return
+        try:
+            client.commandExecute('tradeTransaction', {"tradeTransInfo": { "order": trades["returnData"][1]["order"],
+                    "symbol": xtb_pair,
+                    "type": 2,
+                    "price": 1,
+                    "volume": volume}})
+        except:
+            pass
+            
 
 
 def open_trade(client, command, volume, xtb_pair, without_tp):
