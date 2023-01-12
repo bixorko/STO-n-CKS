@@ -374,7 +374,6 @@ def keep_alive(client, xtb_pair):
                                         "type": 3,
                                         "volume": 0.02}})
             hit_take_profit = True
-        client.commandExecute('ping')
 
 
 def close_trade(client, volume, xtb_pair):
