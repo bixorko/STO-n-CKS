@@ -7,8 +7,8 @@ import time
 import ssl
 import yfinance as yf
 import talib as ta
-from display_resources.lib.waveshare_OLED import OLED_1in5
-from PIL import Image, ImageDraw, ImageFont
+# from display_resources.lib.waveshare_OLED import OLED_1in5
+# from PIL import Image, ImageDraw, ImageFont
 from threading import Thread
 import pause
 
@@ -237,10 +237,10 @@ display_time = int(time.time()) + 10
 
 
 def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
-    disp = OLED_1in5.OLED_1in5()
-    disp.Init()
-    font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
-    create_thread = True
+    # disp = OLED_1in5.OLED_1in5()
+    # disp.Init()
+    # font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
+    # create_thread = True
     
     global open_price, close_price, ema_5, ema_10, macd, rsi, spread, is_bearish, is_bullish
 
@@ -297,43 +297,43 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
         print("Is Bearish: ", is_bearish)
         print("Is Bullish: ", is_bullish, "\n")
             
-        if create_thread and with_display:
-            thread = Thread(target=update_display, args=(disp, font), daemon=True)
-            thread.start()
-            create_thread = False
+        # if create_thread and with_display:
+        #     thread = Thread(target=update_display, args=(disp, font), daemon=True)
+        #     thread.start()
+        #     create_thread = False
 		
         keep_alive(client, xtb_pair)
         
         
-def update_display(disp, font):
-    global display_time
+# def update_display(disp, font):
+#     global display_time
     
-    while(True):
-        if is_bearish:
-            trend = 'Bearish'
-        else:
-            trend = 'Bullish'
+#     while(True):
+#         if is_bearish:
+#             trend = 'Bearish'
+#         else:
+#             trend = 'Bullish'
             
-        disp.clear()
-        image1 = Image.new('L', (disp.width, disp.height), 0)
-        draw = ImageDraw.Draw(image1)
-        draw.line([(0,0),(127,0)], fill = 15)
-        draw.line([(0,0),(0,127)], fill = 15)
-        draw.line([(0,127),(127,127)], fill = 15)
-        draw.line([(127,0),(127,127)], fill = 15)
+#         disp.clear()
+#         image1 = Image.new('L', (disp.width, disp.height), 0)
+#         draw = ImageDraw.Draw(image1)
+#         draw.line([(0,0),(127,0)], fill = 15)
+#         draw.line([(0,0),(0,127)], fill = 15)
+#         draw.line([(0,127),(127,127)], fill = 15)
+#         draw.line([(127,0),(127,127)], fill = 15)
 
-        draw.text((2,0),   f'OPEN  Price: {round(open_price, 5)}', font = font, fill = 1)
-        draw.text((2,16),  f'CLOSE Price: {round(close_price, 5)}', font = font, fill = 1)
-        draw.text((2,32),  f'EMA5: {round(ema_5, 5)}', font = font, fill = 1)
-        draw.text((2,48),  f'EMA10: {round(ema_10, 5)}', font = font, fill = 1)
-        draw.text((2,64),  f'MACD: {round(macd, 5)}', font = font, fill = 1)
-        draw.text((2,80),  f'RSI: {round(rsi, 5)}', font = font, fill = 1)
-        draw.text((2,96),  f'Spread: {round(spread, 2)}', font = font, fill = 1)
-        draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
-        image1 = image1.rotate(180)
-        disp.ShowImage(disp.getbuffer(image1))
-        display_time += 1800
-        pause.until(display_time)
+#         draw.text((2,0),   f'OPEN  Price: {round(open_price, 5)}', font = font, fill = 1)
+#         draw.text((2,16),  f'CLOSE Price: {round(close_price, 5)}', font = font, fill = 1)
+#         draw.text((2,32),  f'EMA5: {round(ema_5, 5)}', font = font, fill = 1)
+#         draw.text((2,48),  f'EMA10: {round(ema_10, 5)}', font = font, fill = 1)
+#         draw.text((2,64),  f'MACD: {round(macd, 5)}', font = font, fill = 1)
+#         draw.text((2,80),  f'RSI: {round(rsi, 5)}', font = font, fill = 1)
+#         draw.text((2,96),  f'Spread: {round(spread, 2)}', font = font, fill = 1)
+#         draw.text((2,112), f'Trend: {trend}', font = font, fill = 1)
+#         image1 = image1.rotate(180)
+#         disp.ShowImage(disp.getbuffer(image1))
+#         display_time += 1800
+#         pause.until(display_time)
 
 # kazdy minutu sa spytat ci pocet tradov == 1, ak ano, tak to znamena, ze jeden trade je na take profit
 # a musime editnut stoploss ostavajuceho tradu na 0e aby ten trade uz nikdy neprerobil
