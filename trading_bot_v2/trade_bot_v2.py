@@ -201,26 +201,10 @@ def main():
     with_display = False
     if arg_display == "on":
         with_display = True
-
-    # create & connect to RR socket
-    client = APIClient()
     
-    # connect to RR socket, login
-    loginResponse = client.execute(loginCommand(userId=userId, password=password))
-    logger.info(str(loginResponse)) 
-
-    # check if user logged in correctly
-    if(loginResponse['status'] == False):
-        print('Login failed. Error code: {0}'.format(loginResponse['errorCode']))
-        return
-
-    # get ssId from login response
-    ssid = loginResponse['streamSessionId']
+    trade(userId, password, xtb_pair, yahoo_pair, chart_interval, with_display)
     
-    trade(client, xtb_pair, yahoo_pair, chart_interval, with_display)
-    
-    # gracefully close RR socket
-    client.disconnect()
+
     
 # global variables for spearate display thread
 open_price = 0.0
@@ -236,7 +220,22 @@ start_time = int(time.time())
 display_time = int(time.time()) + 10
 
 
-def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
+def renewConnection(userId, password):
+    client = APIClient()
+    
+    # connect to RR socket, login
+    loginResponse = client.execute(loginCommand(userId=userId, password=password))
+    # logger.info(str(loginResponse)) 
+
+    # check if user logged in correctly
+    if(loginResponse['status'] == False):
+        print('Login failed. Error code: {0}'.format(loginResponse['errorCode']))
+        return
+    
+    return client
+
+
+def trade(userId, password, xtb_pair, yahoo_pair, chart_interval, with_display):
     # disp = OLED_1in5.OLED_1in5()
     # disp.Init()
     # font = ImageFont.truetype('./display_resources/pic/Font.ttc', 13)
@@ -245,6 +244,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
     global open_price, close_price, ema_5, ema_10, macd, rsi, spread, is_bearish, is_bullish
 
     while True:
+        # create & connect to RR socket
+        client = renewConnection(userId, password)
+
         # get symbol info
         symbol_info = client.commandExecute('getSymbol', {'symbol' : xtb_pair})
         spread = (symbol_info["returnData"]["spreadRaw"]) * 10**4
@@ -273,9 +275,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
                 is_bearish = True
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd < 0 and rsi < 50: # check spread and MACD check
-                    time.sleep(5)
+                    time.sleep(3)
                     open_trade(client, 1, 0.02, xtb_pair, False)   #open short position
-                    time.sleep(5)
+                    time.sleep(3)
                     open_trade(client, 1, 0.02, xtb_pair, True)   #open short position
                     print("OPENED SHORT POSITION!")
 
@@ -288,9 +290,9 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
                 is_bullish = True
                 close_trade(client, 0.02, xtb_pair)     #close opened trade (if exists)
                 if macd > 0 and rsi > 50: # check spread and MACD check
-                    time.sleep(5)
+                    time.sleep(3)
                     open_trade(client, 0, 0.02, xtb_pair, False)   #open long position
-                    time.sleep(5)
+                    time.sleep(3)
                     open_trade(client, 0, 0.02, xtb_pair, True)   #open long position
                     print("OPENED LONG POSITION!")
 
@@ -303,6 +305,8 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
         #     create_thread = False
 		
         keep_alive(client, xtb_pair)
+
+        client.disconnect()
         
         
 # def update_display(disp, font):
@@ -335,25 +339,6 @@ def trade(client, xtb_pair, yahoo_pair, chart_interval, with_display):
 #         display_time += 1800
 #         pause.until(display_time)
 
-# kazdy minutu sa spytat ci pocet tradov == 1, ak ano, tak to znamena, ze jeden trade je na take profit
-# a musime editnut stoploss ostavajuceho tradu na 0e aby ten trade uz nikdy neprerobil
-# toto nizsie fnuguje -> ale pozor treba takenut order z responsu getTrades a nie z toho co vrati ten resposne ked sa trade vytvori
-# amen
-        
-# {
-#     "command": "tradeTransaction",
-#     "arguments": {
-#         "tradeTransInfo": {
-#             "order": 458056969,
-#             "price": 1.4,
-#             "sl": 0,
-#             "tp": 17200,
-#             "symbol": "BITCOIN",
-#             "type": 3,
-#             "volume": 0.1
-#         }
-#     }
-# }
 
 def keep_alive(client, xtb_pair):
     hit_take_profit = False
@@ -362,8 +347,9 @@ def keep_alive(client, xtb_pair):
     for _ in range(30):
         start_time += 60
         pause.until(start_time)
-        if (len(client.commandExecute('getTrades', {'openedOnly': True})['returnData']) == 1) and not hit_take_profit:
-            active_trade = client.commandExecute('getTrades', {'openedOnly': True})['returnData'][0]
+        active_trades = client.commandExecute('getTrades', {'openedOnly': True})['returnData']
+        if (len(active_trades) == 1) and not hit_take_profit:
+            active_trade = active_trades[0]
             new_sl = active_trade['open_price']
             order = active_trade['order']
             client.commandExecute('tradeTransaction', {"tradeTransInfo": {"order": order,
@@ -472,25 +458,3 @@ if __name__ == "__main__":
         print("Run script as: python trade_bot.py [--id <your account id>] [--password <your account password>] [--xtb <xtb pair name>] [--yf <yahoo finance pair name] [--chart <X(m/h/d/y)] [--display (on/off)]", file=sys.stderr)
         exit(1)
     main()	
-
-
-# import yfinance as yf
-# import talib as ta
-
-# df = yf.Ticker('EURUSD=X').history(period='2d', interval='5m')
-# df['ema_10'] = df['Open'].ewm(span=10, adjust=False, min_periods=10).mean()
-# df['ema_5'] = df['Close'].ewm(span=5, adjust=False, min_periods=5).mean()
-
-# k = df['Close'].ewm(span=8, adjust=False, min_periods=8).mean()
-# d = df['Close'].ewm(span=20, adjust=False, min_periods=20).mean()
-# macd = k - d
-# macd_s = macd.ewm(span=9, adjust=False, min_periods=9).mean()
-# macd_h = macd - macd_s
-
-# df['macd'] = df.index.map(macd)
-# df['macd_h'] = df.index.map(macd_h)
-# df['macd_s'] = df.index.map(macd_s)
-
-# df['rsi'] = ta.RSI(df['Close'], timeperiod=14)
-
-# print(df.iloc[-2]['rsi'])
