@@ -1,0 +1,49 @@
+.form-inner {
+    background: 
+        linear-gradient(135deg, rgba(58, 71, 93, 0.7), rgba(36, 49, 63, 0.7));
+    border: 1px solid rgba(165, 179, 194, 0.2);
+    border-radius: 5px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 10px;
+    box-shadow: 0px 0px 10px 2px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.form-inner h5 {
+    color: #a5b3c2;  /* Keeping this color */
+    margin: 20px 0;
+    font-size: 2.5rem;
+    font-weight: 600;
+}
+
+.MuiButton-containedPrimary {
+    background: linear-gradient(45deg, #4a6980, #2e4b61);
+    border: 1px solid #2e4b61;
+    border-radius: 4px;
+    transition: transform 0.4s ease-in-out, background 0.2s ease-in-out;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.MuiButton-containedPrimary:hover {
+    transform: scale(1.1);
+    background: linear-gradient(45deg, #396874, #1f3d54);
+}
+
+.MuiOutlinedInput-root {
+    background: rgba(194, 165, 165, 0.1);
+    transition: transform 0.4s ease-in-out, background 0.2s ease-in-out;
+}
+
+.MuiOutlinedInput-root:hover {
+    background: rgba(165, 179, 194, 0.2);
+}
+
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+    border-color: #2e4b61;
+}
+
+.MuiFormLabel-root.Mui-focused {
+    color: #2e4b61;
+}

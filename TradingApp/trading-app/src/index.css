@@ -1,0 +1,32 @@
+body {
+  background: linear-gradient(135deg, #2e3951, #1a2433); /* deep blue tones */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  overflow-x: hidden;
+  padding-top: 64px;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: padding 0.3s ease-in-out;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.MuiDrawer-paperAnchorLeft {
+  background: #2e3951; 
+  color: #e0e0e0;
+  width: 250px;
+}
+
+.MuiListItemIcon-root {
+  color: #e0e0e0;
+}

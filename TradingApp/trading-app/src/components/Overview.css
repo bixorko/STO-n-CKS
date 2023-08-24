@@ -1,0 +1,49 @@
+.card-container {
+    display: flex;
+    flex-wrap: wrap; /* Allows items to wrap to the next line if the container width is reached */
+    justify-content: flex-end; /* Pushes items to the right side */
+    gap: 20px; /* Provides spacing between cards */
+}
+
+
+.card-overview {
+    margin: 20px;
+    background: 
+        linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)), 
+        url('/xtb.jpg') no-repeat center; 
+    background-size: cover;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    -webkit-backdrop-filter: blur(30px); /* this is for Safari */
+    backdrop-filter: blur(30px);
+    transition: transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: #e0e0e0;
+    margin: 10px 0; /* Adjust the margin as needed */
+    flex: 0 0 calc(33.33% - 20px); /* This sets the card width to roughly 1/3 of the container minus the gap. Adjust as necessary. */
+    min-width: 250px;
+    max-width: 250px;
+}
+
+.card-overview:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 7px 20px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover for a floating effect */
+}
+
+.card-overview .MuiTypography-root:not(.highlight):not(.lowlight) {
+    color: #000000;
+}
+
+h5, p {
+    margin: 5px 0;
+}
+
+p.highlight {
+    color: #33FF33; /* Adjusted green for a better look */
+    font-weight: 600; /* Slightly bold text for emphasis */
+}
+
+p.lowlight {
+    color: #FF3333; /* Adjusted red for a better look */
+    font-weight: 600; /* Slightly bold text for emphasis */
+}
