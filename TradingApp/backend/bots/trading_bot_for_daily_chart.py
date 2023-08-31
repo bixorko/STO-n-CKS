@@ -157,7 +157,7 @@ def baseCommand(commandName, arguments=None):
 def loginCommand(userId, password, appName=''):
     return baseCommand('login', dict(userId=userId, password=password, appName=appName))
 
-class TradingBot:
+class TradingBotForDailyChart:
     def __init__(self, user_id, password, xtb_pair, yahoo_pair, chart_interval, chart_history, period, volume):
         self.user_id = user_id
         self.password = password
@@ -167,7 +167,7 @@ class TradingBot:
         self.open_price = 0.0
         self.close_price = 0.0
         self.ema_5 = 0.0
-        self.ema_10 = 0.0
+        self.ema_15 = 0.0
         self.macd = 0.0
         self.rsi = 0.0
         self.spread = 0.0
@@ -185,7 +185,7 @@ class TradingBot:
             "yahoo_pair": self.yahoo_pair,
             "chart_interval": self.chart_interval,
             "ema_5": self.ema_5,
-            "ema_10": self.ema_10,
+            "ema_15": self.ema_15,
             "macd": self.macd,
             "rsi": self.rsi,
             "spread": self.spread,
@@ -219,12 +219,10 @@ class TradingBot:
             print("OPEN Price: ", self.open_price)
             print("CLOSE Price: ", self.close_price)
             print("EMA5: ", self.ema_5)
-            print("EMA10: ", self.ema_10)
+            print("EMA15: ", self.ema_15)
             print("Spread: ", self.spread)
-            print("MACD: ", self.macd)
-            print("RSI: ", self.rsi)
 
-            if self.ema_5 < self.ema_10:
+            if self.ema_5 < self.ema_15:
                 if not self.is_bearish and not self.is_bullish:
                     self.is_bearish = True
                 
@@ -232,14 +230,13 @@ class TradingBot:
                     self.is_bullish = False      
                     self.is_bearish = True
                     self.close_trade(client)   
-                    if self.macd < 0 and self.rsi < 50:
-                        time.sleep(3)
-                        self.open_trade(client, 1, False)  
-                        time.sleep(3)
-                        self.open_trade(client, 1, True)   
-                        print("OPENED SHORT POSITION!")
+                    time.sleep(3)
+                    self.open_trade(client, 1, False)  
+                    time.sleep(3)
+                    self.open_trade(client, 1, True)   
+                    print("OPENED SHORT POSITION!")
 
-            elif self.ema_5 > self.ema_10:
+            elif self.ema_5 > self.ema_15:
                 if not self.is_bearish and not self.is_bullish:
                     self.is_bullish = True
                 
@@ -247,12 +244,11 @@ class TradingBot:
                     self.is_bearish = False      
                     self.is_bullish = True
                     self.close_trade(client)
-                    if self.macd > 0 and self.rsi > 50:
-                        time.sleep(3)
-                        self.open_trade(client, 0, False)
-                        time.sleep(3)
-                        self.open_trade(client, 0, True)
-                        print("OPENED LONG POSITION!")
+                    time.sleep(3)
+                    self.open_trade(client, 0, False)
+                    time.sleep(3)
+                    self.open_trade(client, 0, True)
+                    print("OPENED LONG POSITION!")
 
             print("Is Bearish: ", self.is_bearish)
             print("Is Bullish: ", self.is_bullish, "\n")
@@ -305,12 +301,12 @@ class TradingBot:
         # calculate TP and SL based on tactic
         if command == 0:
             price = client.commandExecute('getSymbol', {"symbol": self.xtb_pair})["returnData"]["ask"]
-            stoploss = round(price-0.0025, 5)
-            takeprofit = round(price+0.0030, 5)
+            stoploss = round(self.open_price, 5)
+            takeprofit = round(price+0.0220, 5)
         else:
             price = client.commandExecute('getSymbol', {"symbol": self.xtb_pair})["returnData"]["bid"]
-            stoploss = round(price+0.0025, 5)
-            takeprofit = round(price-0.0030, 5)
+            stoploss = round(self.open_price, 5)
+            takeprofit = round(price-0.0220, 5)
             
         if without_tp:
             takeprofit = 0
@@ -329,27 +325,13 @@ class TradingBot:
 
     def set_pair_indicators(self):
         df = yf.Ticker(self.yahoo_pair).history(period=self.chart_history, interval=self.chart_interval)
-        df['ema_10'] = df['Open'].ewm(span=10, adjust=False, min_periods=10).mean()
+        df['ema_15'] = df['Open'].ewm(span=15, adjust=False, min_periods=15).mean()
         df['ema_5'] = df['Close'].ewm(span=5, adjust=False, min_periods=5).mean()
-
-        k = df['Close'].ewm(span=8, adjust=False, min_periods=8).mean()
-        d = df['Close'].ewm(span=20, adjust=False, min_periods=20).mean()
-        macd = k - d
-        macd_s = macd.ewm(span=9, adjust=False, min_periods=9).mean()
-        macd_h = macd - macd_s
-
-        df['macd'] = df.index.map(macd)
-        df['macd_h'] = df.index.map(macd_h)
-        df['macd_s'] = df.index.map(macd_s)
-
-        df['rsi'] = ta.RSI(df['Close'], timeperiod=14)
 
         indicators = df.iloc[-2]
 
         self.ema_5 = indicators['ema_5']
-        self.ema_10 = indicators['ema_10']
-        self.macd = indicators['macd_h']
-        self.rsi = indicators['rsi']
+        self.ema_15 = indicators['ema_15']
 
     def get_chart(self, client):
         return client.commandExecute('getChartLastRequest', 

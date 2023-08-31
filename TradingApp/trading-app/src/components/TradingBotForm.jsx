@@ -106,6 +106,7 @@ function TradingBotForm() {
                             >
                                 <MenuItem value="30m">30m</MenuItem>
                                 <MenuItem value="1h">1h</MenuItem>
+                                <MenuItem value="1d">1d</MenuItem>
                                 {/* Add other intervals as needed */}
                             </Select>
                         </FormControl>
