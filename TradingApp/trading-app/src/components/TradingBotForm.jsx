@@ -40,7 +40,7 @@ function TradingBotForm() {
         <ThemeProvider theme={theme}>
             <div className="landing-container">
                 <Container component="main" maxWidth="xs">
-                    <Typography variant="h5" align="center" sx={{ color: '#a5b3c2', margin: '20px 0', fontSize: '2.5rem', fontWeight: 600 }}>
+                    <Typography style={{ fontFamily: 'Poppins' }} variant="h5" align="center" sx={{ color: '#2e3951', margin: '20px 0', fontSize: '2.5rem', fontWeight: 600 }}>
                         New Trading Bot
                     </Typography>
 

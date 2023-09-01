@@ -31,7 +31,9 @@ function Overview() {
                             <Typography>Yahoo Pair: {botInfo.yahoo_pair}</Typography>
                             <Typography>Chart Interval: {botInfo.chart_interval}</Typography>
                             <Typography>EMA 5: {Number(botInfo.ema_5).toFixed(4)}</Typography>
-                            <Typography>EMA 10: {isNaN(botInfo.ema_10) ? Number(botInfo.ema_15).toFixed(4) : Number(botInfo.ema_10).toFixed(4)}</Typography>
+                            <Typography>
+                                EMA {isNaN(botInfo.ema_10) ? '15' : '10'}: {isNaN(botInfo.ema_10) ? Number(botInfo.ema_15).toFixed(4) : Number(botInfo.ema_10).toFixed(4)}
+                            </Typography>
                             <Typography>MACD: {Number(botInfo.macd).toFixed(4)}</Typography>
                             <Typography>RSI: {Number(botInfo.rsi).toFixed(4)}</Typography>
                             <Typography>Spread: {botInfo.spread}</Typography>

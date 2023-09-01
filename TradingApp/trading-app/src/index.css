@@ -1,10 +1,10 @@
 body {
-  background: linear-gradient(135deg, #2e3951, #1a2433); /* deep blue tones */
+  background: linear-gradient(135deg, #83c5be, #ffddd2);
   height: 100vh;
   display: flex;
   flex-direction: column;
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Poppins';
   overflow-x: hidden;
   padding-top: 64px;
 }
@@ -18,7 +18,7 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: 'Poppins';
 }
 
 .MuiDrawer-paperAnchorLeft {
@@ -29,4 +29,8 @@ code {
 
 .MuiListItemIcon-root {
   color: #e0e0e0;
+  transition: color 0.2s ease;
+  &:hover {
+    color: #83c5be;
+  }
 }
