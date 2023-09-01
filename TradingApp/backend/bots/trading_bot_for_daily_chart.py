@@ -158,7 +158,9 @@ def loginCommand(userId, password, appName=''):
     return baseCommand('login', dict(userId=userId, password=password, appName=appName))
 
 class TradingBotForDailyChart:
-    def __init__(self, user_id, password, xtb_pair, yahoo_pair, chart_interval, chart_history, period, volume):
+    def __init__(self, bot_id, user_id, password, xtb_pair, yahoo_pair, chart_interval, chart_history, period, volume):
+        self.running = True
+        self.bot_id = bot_id
         self.user_id = user_id
         self.password = password
         self.xtb_pair = xtb_pair
@@ -180,6 +182,7 @@ class TradingBotForDailyChart:
 
     def get_bot_info(self):
         return {
+            "bot_id": self.bot_id,
             "user_id": self.user_id,
             "xtb_pair": self.xtb_pair,
             "yahoo_pair": self.yahoo_pair,
@@ -201,9 +204,12 @@ class TradingBotForDailyChart:
             return
 
         return client
+    
+    def stop(self):
+        self.running = False
 
     def trade(self):
-        while True:
+        while self.running:
             client = self.renewConnection()
 
             symbol_info = client.commandExecute('getSymbol', {'symbol' : self.xtb_pair})

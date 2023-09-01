@@ -1,6 +1,7 @@
 body {
-  background: linear-gradient(135deg, #759a96, #ffc4b0); /* Midway between the original and darker version */
-  height: 100vh;
+  background: linear-gradient(135deg, #759a96, #ffc4b0);
+  height: auto;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   margin: 0;
