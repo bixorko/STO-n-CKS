@@ -3,44 +3,55 @@
     flex-wrap: wrap;
     justify-content: flex-start; 
     gap: 20px;
+    padding: 20px;
 }
 
 .card-overview {
     margin: 20px;
     background: 
         linear-gradient(145deg, #83c5be, #e29578);
-    background-size: cover;
     border: 1px solid #ffddd2;
-    border-radius: 10px;
+    border-radius: 15px; /* Increased the border-radius for a more rounded feel */
     backdrop-filter: blur(10px);
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     color: #e0e0e0;
     margin: 10px 0;
     flex: 0 0 calc(33.33% - 20px);
     min-width: 250px;
     max-width: 250px;
+    padding: 20px 10px; /* Added padding */
 }
 
 .card-overview:hover {
     transform: scale(1.05);
-    box-shadow: 0px 7px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0px 7px 20px rgba(0, 0, 0, 0.2); /* Increased shadow intensity on hover */
 }
 
 .card-overview .MuiTypography-root:not(.highlight):not(.lowlight) {
     color: #2e3951;
+    font-size: 16px; /* Adjust the size as required */
+    line-height: 1.5; /* Improved line height for better readability */
 }
 
 h5, p {
-    margin: 5px 0;
+    margin: 10px 0; /* Increased margin for clearer separation */
+    padding-left: 10px; /* Added padding for alignment */
 }
 
-p.highlight {
-    color: #33FF33;
-    font-weight: 600;
+p.highlight, p.lowlight {
+    font-size: 18px; /* Adjust the size as required */
+    padding: 5px 10px;
 }
 
-p.lowlight {
-    color: #FF3333;
-    font-weight: 600;
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Make sure the items start from the beginning */
+}
+
+/* Icons styling for better visuals */
+.card-overview .MuiSvgIcon-root {
+    margin-right: 10px;
+    font-size: 24px; /* Increased size for better visibility */
 }

@@ -37,15 +37,17 @@ function Overview() {
                             <Typography>MACD: {Number(botInfo.macd).toFixed(4)}</Typography>
                             <Typography>RSI: {Number(botInfo.rsi).toFixed(4)}</Typography>
                             <Typography>Spread: {botInfo.spread}</Typography>
-                            <Typography className={
-                                botInfo.trend === 'Bullish' ? "highlight" : 
-                                botInfo.trend === 'Bearish' ? "lowlight" : ""
-                            }>
-                                Trend: 
-                                {botInfo.trend === 'Bullish' && <ArrowUpwardIcon color="inherit" />}
-                                {botInfo.trend === 'Bearish' && <ArrowDownwardIcon color="inherit" />}
+                            <Typography 
+                                className={
+                                    `flex-center ${botInfo.trend === 'Bullish' ? "highlight" : 
+                                    botInfo.trend === 'Bearish' ? "lowlight" : ""}`
+                                }
+                            >
+                                {botInfo.trend === 'Bullish' && <ArrowUpwardIcon color="inherit" style={{ marginRight: '10px' }} />}
+                                {botInfo.trend === 'Bearish' && <ArrowDownwardIcon color="inherit" style={{ marginRight: '10px' }} />}
                                 {botInfo.trend}
                             </Typography>
+
                         </CardContent>
                     </CardActionArea>
                 </Card>

@@ -13,7 +13,6 @@ const theme = createTheme({
     },
 });
 
-
 function App() {
     const [open, setOpen] = useState(false);
 
@@ -25,7 +24,7 @@ function App() {
                     <AppBar 
                         position="fixed" 
                         style={{ 
-                            background: 'linear-gradient(135deg, #83c5be, #ffddd2)', 
+                            background: 'linear-gradient(135deg, #759a96, #ffc4b0)',
                             boxShadow: '0px 0px 10px 2px rgba(0, 0, 0, 0.2)' 
                         }}
                     >
@@ -56,10 +55,10 @@ function App() {
                             alignItems: 'center', 
                             justifyContent: 'space-between', 
                             padding: '8px', 
-                            background: 'linear-gradient(135deg, #83c5be, #ffddd2)' 
+                            background: '#2f3a52' 
                         }}>
-                            <h2 style={{ flexGrow: 1, color: '#2e3951', fontFamily: 'Poppins' }}>Menu</h2>
-                            <IconButton onClick={() => setOpen(!open)} style={{ color: '#2e3951' }}>
+                            <h2 style={{ flexGrow: 1, color: '#1e2432', fontFamily: 'Poppins' }}>Menu</h2>
+                            <IconButton onClick={() => setOpen(!open)} style={{ color: '#1e2432' }}>
                                 <Menu />
                             </IconButton>
                         </div>
@@ -68,7 +67,7 @@ function App() {
                                 button 
                                 onClick={() => window.location.href='/new'}
                                 sx={{
-                                    '&:hover': { background: '#83c5be' }
+                                    '&:hover': { background: '#759a96' }
                                 }}
                             >
                                 <ListItemIcon sx={{ color: '#83c5be' }}><Build /></ListItemIcon>
@@ -78,7 +77,7 @@ function App() {
                                 button 
                                 onClick={() => window.location.href='/'}
                                 sx={{
-                                    '&:hover': { background: '#83c5be' }
+                                    '&:hover': { background: '#759a96' }
                                 }}
                             >
                                 <ListItemIcon sx={{ color: '#83c5be' }}><Dashboard /></ListItemIcon>
