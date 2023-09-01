@@ -32,7 +32,7 @@ function App() {
                             <IconButton edge="start" color="inherit" onClick={() => setOpen(true)}>
                                 <Menu />
                             </IconButton>
-                            <h2 style={{ flexGrow: 1, color: '#2e3951', fontFamily: 'Poppins' }}>XTB Trading Bot</h2>
+                            <h2 style={{ flexGrow: 1, color: '#2e3951', fontWeight: 300 }}>XTB Trading Bot</h2>
                         </Toolbar>
                     </AppBar>
 
@@ -57,7 +57,7 @@ function App() {
                             padding: '8px', 
                             background: '#2f3a52' 
                         }}>
-                            <h2 style={{ flexGrow: 1, color: '#1e2432', fontFamily: 'Poppins' }}>Menu</h2>
+                            <h2 style={{ flexGrow: 1, color: '#1e2432', fontFamily: 'Poppins', fontWeight: 300 }}>Menu</h2>
                             <IconButton onClick={() => setOpen(!open)} style={{ color: '#1e2432' }}>
                                 <Menu />
                             </IconButton>

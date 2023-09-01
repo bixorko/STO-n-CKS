@@ -19,7 +19,7 @@ function Overview() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedBotId, setSelectedBotId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     useEffect(() => {
         // Fetch bot info when component mounts
         fetch('http://localhost:5000/get_all_bot_info')
@@ -50,8 +50,6 @@ function Overview() {
             .then(response => response.json())
             .then(data => {
                 if (data.message) {
-                    alert(data.message);
-                    // Directly update state without refetching the data
                     const updatedBots = botsInfo.filter(bot => bot.bot_id !== selectedBotId);
                     setBotsInfo(updatedBots);
                 } else {
@@ -61,21 +59,24 @@ function Overview() {
         handleCloseDialog();
     };
     
+    // When isLoading is true:
     if (isLoading) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '75vh' }}>
                 <CircularProgress />
             </div>
         );
     }
 
+    // When there are no running bots:
     if (botsInfo.length === 0) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '75vh' }}>
                 No Running Bots
             </div>
         );
     }
+
 
     return (
         <div className="card-container">
