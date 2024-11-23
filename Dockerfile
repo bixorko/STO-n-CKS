@@ -12,4 +12,4 @@ ARG DISCORD_CHANNEL_ID
 ENV DISCORD_TOKEN=$DISCORD_TOKEN
 ENV DISCORD_CHANNEL_ID=$DISCORD_CHANNEL_ID
 
-CMD ["python", "live_trading_discord_bot.py"]
+CMD ["python", "trading_bot.py"]
