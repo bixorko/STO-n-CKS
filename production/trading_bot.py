@@ -22,7 +22,7 @@ async def monitor_stock():
     while True:
         try:
             # Fetch the latest stock data
-            stock_data = yf.download(ticker, period='30d', interval='1d')
+            stock_data = yf.download(ticker, period='1mo', interval='1d')
 
             # Skip iteration if not enough data is available
             if len(stock_data) < 30:
