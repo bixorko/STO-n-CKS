@@ -49,7 +49,7 @@ while current_date <= end_date:
 
         # Calculate ATR with a 14-day rolling window, starting after enough data is available
         if i >= atr_window:
-            stock_data.at[stock_data.index[i], 'ATR'] = stock_data['TR'].iloc[i - atr_window + 1:i + 1].mean()
+            stock_data.at[stock_data.index[i], 'ATR'] = stock_data['TR'].iloc[i - atr_window:i + 1].mean()
 
         # Calculate the 30-day moving average and its derivatives
         if i >= 29:
@@ -62,30 +62,29 @@ while current_date <= end_date:
         if (stock_data['Second_Derivative'].iloc[i] > 0) and (stock_data['First_Derivative'].iloc[i] > 0):
             stock_data.at[stock_data.index[i], 'Signal'] = 'Buy'
 
-        # Determine position
-        stock_data.at[stock_data.index[i], 'Position'] = 1 if stock_data['Signal'].iloc[i - 1] == 'Buy' else stock_data['Position'].iloc[i - 1]
+    # Start trading on the next day using signals calculated until day i
+    for i in range(1, len(stock_data) - 1):
+        # Determine position based on previous day's signal
+        stock_data.at[stock_data.index[i + 1], 'Position'] = 1 if stock_data['Signal'].iloc[i] == 'Buy' else stock_data['Position'].iloc[i]
 
-        # Calculate ATR-based stop-loss and take-profit levels
-        if not pd.isna(stock_data['ATR'].iloc[i - 1]):
-            stock_data.at[stock_data.index[i], 'ATR_Stop_Loss'] = stock_data['Close'].iloc[i - 1] + (atr_multiplier_stop_loss * stock_data['ATR'].iloc[i - 1])
-            stock_data.at[stock_data.index[i], 'ATR_Take_Profit'] = stock_data['Close'].iloc[i - 1] + (atr_multiplier_take_profit * stock_data['ATR'].iloc[i - 1])
+        # Calculate ATR-based stop-loss and take-profit levels (for the next day)
+        if not pd.isna(stock_data['ATR'].iloc[i]):
+            stock_data.at[stock_data.index[i + 1], 'ATR_Stop_Loss'] = stock_data['Open'].iloc[i + 1] + (atr_multiplier_stop_loss * stock_data['ATR'].iloc[i])
+            stock_data.at[stock_data.index[i + 1], 'ATR_Take_Profit'] = stock_data['Open'].iloc[i + 1] + (atr_multiplier_take_profit * stock_data['ATR'].iloc[i])
 
-        # Calculate daily return
-        daily_return = (stock_data['Close'].iloc[i] / stock_data['Close'].iloc[i - 1]) - 1
-        stock_data.at[stock_data.index[i], 'Daily_Return'] = daily_return
-
-        # Calculate strategy return
-        if stock_data['Position'].iloc[i] == 1:
-            if stock_data['Low'].iloc[i] <= stock_data['ATR_Stop_Loss'].iloc[i]:
-                stock_data.at[stock_data.index[i], 'Strategy_Return'] = (stock_data['ATR_Stop_Loss'].iloc[i] / stock_data['Close'].iloc[i - 1]) - 1
-            elif stock_data['High'].iloc[i] >= stock_data['ATR_Take_Profit'].iloc[i]:
-                stock_data.at[stock_data.index[i], 'Strategy_Return'] = (stock_data['ATR_Take_Profit'].iloc[i] / stock_data['Close'].iloc[i - 1]) - 1
+        # Calculate strategy return based on next day's open price
+        if stock_data['Position'].iloc[i + 1] == 1:
+            if stock_data['Low'].iloc[i + 1] <= stock_data['ATR_Stop_Loss'].iloc[i + 1]:
+                stock_data.at[stock_data.index[i + 1], 'Strategy_Return'] = (stock_data['ATR_Stop_Loss'].iloc[i + 1] / stock_data['Open'].iloc[i + 1]) - 1
+            elif stock_data['High'].iloc[i + 1] >= stock_data['ATR_Take_Profit'].iloc[i + 1]:
+                stock_data.at[stock_data.index[i + 1], 'Strategy_Return'] = (stock_data['ATR_Take_Profit'].iloc[i + 1] / stock_data['Open'].iloc[i + 1]) - 1
             else:
-                stock_data.at[stock_data.index[i], 'Strategy_Return'] = daily_return
+                stock_data.at[stock_data.index[i + 1], 'Strategy_Return'] = (stock_data['Close'].iloc[i + 1] / stock_data['Open'].iloc[i + 1]) - 1
         else:
-            stock_data.at[stock_data.index[i], 'Strategy_Return'] = 0.0
+            stock_data.at[stock_data.index[i + 1], 'Strategy_Return'] = 0.0
 
     # Calculate cumulative returns
+    stock_data['Daily_Return'] = stock_data['Close'].pct_change()
     stock_data['Cumulative_Market_Return'] = (1 + stock_data['Daily_Return']).cumprod()
     stock_data['Cumulative_Strategy_Return'] = (1 + stock_data['Strategy_Return']).cumprod()
 
