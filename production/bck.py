@@ -28,6 +28,9 @@ final_results = {}
 # Iterate over each ticker
 ticker_counter = 1
 for ticker in tickers:
+    print(f"Processing {ticker_counter}/{len(tickers)}: {ticker}")
+    ticker_counter += 1
+
     # Initialize an empty DataFrame to store results
     cumulative_results = pd.DataFrame()
 
@@ -127,6 +130,10 @@ for ticker in tickers:
     plt.legend()
     plt.grid()
     plt.tight_layout()
+
+    # Add final growth percentages as text labels
+    plt.text(stock_data.index[-1], stock_data['Cumulative_Market_Return'].iloc[-1], f"Market: {final_market_return * 100:.2f}%", fontsize=10, color='blue')
+    plt.text(stock_data.index[-1], stock_data['Cumulative_Strategy_Return'].iloc[-1], f"Strategy: {final_strategy_return * 100:.2f}%", fontsize=10, color='orange')
 
     # Save the plot as an image file
     plot_filename = f"{ticker}_cumulative_returns.png"
