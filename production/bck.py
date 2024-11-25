@@ -132,8 +132,8 @@ for ticker in tickers:
     plt.tight_layout()
 
     # Add final growth percentages as text labels
-    plt.text(stock_data.index[-1], stock_data['Cumulative_Market_Return'].iloc[-1], f"Market: {final_market_return * 100:.2f}%", fontsize=10, color='blue')
-    plt.text(stock_data.index[-1], stock_data['Cumulative_Strategy_Return'].iloc[-1], f"Strategy: {final_strategy_return * 100:.2f}%", fontsize=10, color='orange')
+    plt.text(stock_data.index[-1], stock_data['Cumulative_Market_Return'].iloc[-1], f"Market: {final_market_return * 100:.2f}%", fontsize=10, color='blue', ha='right')
+    plt.text(stock_data.index[-1], stock_data['Cumulative_Strategy_Return'].iloc[-1], f"Strategy: {final_strategy_return * 100:.2f}%", fontsize=10, color='orange', ha='right')
 
     # Save the plot as an image file
     plot_filename = f"{ticker}_cumulative_returns.png"
