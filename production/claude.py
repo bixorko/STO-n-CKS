@@ -18,7 +18,7 @@ class XAUUSDTradingStrategy:
         self.capital = initial_capital
         
         # Strict 2% risk per trade
-        self.max_risk_per_trade = 0.02
+        self.max_risk_per_trade = 1
         self.risk_reward_ratio = 2.5
 
     def calculate_position_size(self, entry_price, stop_loss):
