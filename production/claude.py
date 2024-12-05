@@ -126,33 +126,52 @@ class XAUUSDTradingStrategy:
         for i in range(50, len(data)):
             current_data = data.iloc[:i]
             signals = self.generate_trade_signals(current_data)
-            current_price = data.iloc[i]['Close']
+            current_row = data.iloc[i]
             
             if current_position:
                 if current_position['type'] == 'long':
-                    if current_price <= current_position['stop_loss'] or current_price >= current_position['take_profit']:
-                        profit = (current_price - current_position['entry']) * current_position['size']
+                    # Check if stop loss or take profit was hit during the candle
+                    if (current_row['Low'] <= current_position['stop_loss'] or 
+                        current_row['High'] >= current_position['take_profit']):
+                        
+                        # Determine exit price based on stop loss or take profit
+                        if current_row['Low'] <= current_position['stop_loss']:
+                            exit_price = current_position['stop_loss']
+                        else:
+                            exit_price = current_position['take_profit']
+                        
+                        profit = (exit_price - current_position['entry']) * current_position['size']
                         portfolio_value += profit
                         trades.append({
                             'type': 'long',
                             'entry': current_position['entry'],
-                            'exit': current_price,
+                            'exit': exit_price,
                             'profit': profit
                         })
                         current_position = None
                 
                 elif current_position['type'] == 'short':
-                    if current_price >= current_position['stop_loss'] or current_price <= current_position['take_profit']:
-                        profit = (current_position['entry'] - current_price) * current_position['size']
+                    # Check if stop loss or take profit was hit during the candle
+                    if (current_row['High'] >= current_position['stop_loss'] or 
+                        current_row['Low'] <= current_position['take_profit']):
+                        
+                        # Determine exit price based on stop loss or take profit
+                        if current_row['High'] >= current_position['stop_loss']:
+                            exit_price = current_position['stop_loss']
+                        else:
+                            exit_price = current_position['take_profit']
+                        
+                        profit = (current_position['entry'] - exit_price) * current_position['size']
                         portfolio_value += profit
                         trades.append({
                             'type': 'short',
                             'entry': current_position['entry'],
-                            'exit': current_price,
+                            'exit': exit_price,
                             'profit': profit
                         })
                         current_position = None
             
+            # Enter new position if no current position
             if not current_position:
                 if signals['long_condition']:
                     current_position = {
