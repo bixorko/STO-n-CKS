@@ -1,4 +1,5 @@
 import sys
+import os
 import asyncio
 import yfinance as yf
 import ta
@@ -31,7 +32,7 @@ class XAUUSDTradingStrategy:
         self.run_interval = run_interval
         
         # Strict 2% risk per trade
-        self.max_risk_per_trade = 1
+        self.max_risk_per_trade = 0.02
         self.risk_reward_ratio = 2.5
 
     def calculate_position_size(self, entry_price, stop_loss):
@@ -137,17 +138,26 @@ class XAUUSDTradingStrategy:
                         # Determine exit price based on stop loss or take profit
                         if current_row['Low'] <= current_position['stop_loss']:
                             exit_price = current_position['stop_loss']
+                            profit = (exit_price - current_position['entry']) * current_position['size']
+                            trade_result = 'loss'
                         else:
                             exit_price = current_position['take_profit']
+                            profit = (exit_price - current_position['entry']) * current_position['size']
+                            trade_result = 'profit'
                         
-                        profit = (exit_price - current_position['entry']) * current_position['size']
+                        # Update portfolio value
                         portfolio_value += profit
+                        
                         trades.append({
                             'type': 'long',
                             'entry': current_position['entry'],
                             'exit': exit_price,
-                            'profit': profit
+                            'profit': profit,
+                            'result': trade_result
                         })
+                        
+                        # Update capital for next trades based on trade outcome
+                        self.capital = portfolio_value
                         current_position = None
                 
                 elif current_position['type'] == 'short':
@@ -158,17 +168,26 @@ class XAUUSDTradingStrategy:
                         # Determine exit price based on stop loss or take profit
                         if current_row['High'] >= current_position['stop_loss']:
                             exit_price = current_position['stop_loss']
+                            profit = (current_position['entry'] - exit_price) * current_position['size']
+                            trade_result = 'loss'
                         else:
                             exit_price = current_position['take_profit']
+                            profit = (current_position['entry'] - exit_price) * current_position['size']
+                            trade_result = 'profit'
                         
-                        profit = (current_position['entry'] - exit_price) * current_position['size']
+                        # Update portfolio value
                         portfolio_value += profit
+                        
                         trades.append({
                             'type': 'short',
                             'entry': current_position['entry'],
                             'exit': exit_price,
-                            'profit': profit
+                            'profit': profit,
+                            'result': trade_result
                         })
+                        
+                        # Update capital for next trades based on trade outcome
+                        self.capital = portfolio_value
                         current_position = None
             
             # Enter new position if no current position
@@ -191,15 +210,18 @@ class XAUUSDTradingStrategy:
                     }
         
         total_return = (portfolio_value - initial_capital) / initial_capital * 100
-        profitable_trades = [trade for trade in trades if trade['profit'] > 0]
+        profitable_trades = [trade for trade in trades if trade['result'] == 'profit']
+        losing_trades = [trade for trade in trades if trade['result'] == 'loss']
         
         return {
             'total_return_percentage': round(total_return, 2),
             'total_trades': len(trades),
             'profitable_trades': len(profitable_trades),
+            'losing_trades': len(losing_trades),
             'win_rate': round(len(profitable_trades) / len(trades) * 100, 2) if trades else 0,
             'total_profit': round(sum(trade['profit'] for trade in trades), 2),
-            'average_profit_per_trade': round(sum(trade['profit'] for trade in trades) / len(trades), 2) if trades else 0
+            'average_profit_per_trade': round(sum(trade['profit'] for trade in trades) / len(trades), 2) if trades else 0,
+            'final_portfolio_value': round(portfolio_value, 2)
         }
 
     async def send_discord_alert(self, signals=None, performance=None, latest_data=None):
