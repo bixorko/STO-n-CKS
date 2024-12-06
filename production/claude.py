@@ -19,7 +19,8 @@ class XAUUSDTradingStrategy:
                  symbol='GC=F', 
                  timeframe='30m', 
                  initial_capital=500,
-                 run_interval=3600):  # Default 1 hour interval
+                 run_interval=1800,  # Default 0.5 hour interval
+                 leverage=20):
         logging.basicConfig(level=logging.INFO, 
                             format='%(asctime)s - %(levelname)s: %(message)s')
         self.logger = logging.getLogger(__name__)
@@ -30,21 +31,18 @@ class XAUUSDTradingStrategy:
         self.timeframe = timeframe
         self.capital = initial_capital
         self.run_interval = run_interval
+        self.leverage = leverage
         
         # Strict 2% risk per trade
         self.max_risk_per_trade = 0.02
         self.risk_reward_ratio = 2.5
 
-    def calculate_position_size(self, entry_price, stop_loss):
+    def calculate_position_size(self, entry_price):
         """
-        Calculate position size based on 2% risk per trade
+        Calculate position size based on minimum investment of $125 or 2% of capital, whichever is higher.
         """
-        risk_amount = self.capital * self.max_risk_per_trade
-        price_risk = abs(entry_price - stop_loss)
-        
-        # Calculate number of shares/contracts
-        position_size = risk_amount / price_risk
-        
+        investment_amount = max(125, self.capital * self.max_risk_per_trade)  # Minimum $125 or 2% of capital
+        position_size = investment_amount / entry_price  # Position size in units
         return position_size
 
     def fetch_historical_data(self, period='1mo'):
@@ -70,7 +68,6 @@ class XAUUSDTradingStrategy:
     
     def generate_trade_signals(self, data):
         latest = data.iloc[-1]
-        self.logger.info(f"Latest data used for signal generation: {latest}")
         signals = {
             'long_condition': False,
             'short_condition': False,
@@ -100,9 +97,7 @@ class XAUUSDTradingStrategy:
                 signals['entry_price'] + 
                 (signals['entry_price'] - signals['stop_loss']) * self.risk_reward_ratio
             )
-            signals['position_size'] = self.calculate_position_size(
-                signals['entry_price'], signals['stop_loss']
-            )
+            signals['position_size'] = self.calculate_position_size(signals['entry_price'])
         
         if all(short_conditions):
             signals['short_condition'] = True
@@ -112,9 +107,7 @@ class XAUUSDTradingStrategy:
                 signals['entry_price'] - 
                 (signals['stop_loss'] - signals['entry_price']) * self.risk_reward_ratio
             )
-            signals['position_size'] = self.calculate_position_size(
-                signals['entry_price'], signals['stop_loss']
-            )
+            signals['position_size'] = self.calculate_position_size(signals['entry_price'])
         
         return signals
     
@@ -123,9 +116,10 @@ class XAUUSDTradingStrategy:
         portfolio_value = initial_capital
         trades = []
         current_position = None
+        total_profit_account = 0  # Track total profit at account level
         
         for i in range(50, len(data)):
-            current_data = data.iloc[:i]
+            current_data = data.iloc[:i] 
             signals = self.generate_trade_signals(current_data)
             current_row = data.iloc[i]
             
@@ -145,16 +139,22 @@ class XAUUSDTradingStrategy:
                             profit = (exit_price - current_position['entry']) * current_position['size']
                             trade_result = 'profit'
                         
-                        # Update portfolio value
-                        portfolio_value += profit
+                        # Apply leverage to profit and update portfolio value
+                        profit_account = profit * self.leverage  # Profit at account level with leverage applied
+                        portfolio_value += profit_account
+                        total_profit_account += profit_account
                         
                         trades.append({
                             'type': 'long',
                             'entry': current_position['entry'],
                             'exit': exit_price,
-                            'profit': profit,
+                            'profit': profit_account,
                             'result': trade_result
                         })
+                        
+                        # Print trade details
+                        initial_investment = current_position['entry'] * current_position['size']
+                        print(f"Trade closed: Type=Long, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
                         
                         # Update capital for next trades based on trade outcome
                         self.capital = portfolio_value
@@ -175,16 +175,22 @@ class XAUUSDTradingStrategy:
                             profit = (current_position['entry'] - exit_price) * current_position['size']
                             trade_result = 'profit'
                         
-                        # Update portfolio value
-                        portfolio_value += profit
+                        # Apply leverage to profit and update portfolio value
+                        profit_account = profit * self.leverage  # Profit at account level with leverage applied
+                        portfolio_value += profit_account
+                        total_profit_account += profit_account
                         
                         trades.append({
                             'type': 'short',
                             'entry': current_position['entry'],
                             'exit': exit_price,
-                            'profit': profit,
+                            'profit': profit_account,
                             'result': trade_result
                         })
+                        
+                        # Print trade details
+                        initial_investment = current_position['entry'] * current_position['size']
+                        print(f"Trade closed: Type=Short, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
                         
                         # Update capital for next trades based on trade outcome
                         self.capital = portfolio_value
@@ -200,6 +206,7 @@ class XAUUSDTradingStrategy:
                         'take_profit': signals['take_profit'],
                         'size': signals['position_size']
                     }
+                    print(f"New long position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
                 elif signals['short_condition']:
                     current_position = {
                         'type': 'short',
@@ -208,6 +215,7 @@ class XAUUSDTradingStrategy:
                         'take_profit': signals['take_profit'],
                         'size': signals['position_size']
                     }
+                    print(f"New short position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
         
         total_return = (portfolio_value - initial_capital) / initial_capital * 100
         profitable_trades = [trade for trade in trades if trade['result'] == 'profit']
@@ -219,8 +227,8 @@ class XAUUSDTradingStrategy:
             'profitable_trades': len(profitable_trades),
             'losing_trades': len(losing_trades),
             'win_rate': round(len(profitable_trades) / len(trades) * 100, 2) if trades else 0,
-            'total_profit': round(sum(trade['profit'] for trade in trades), 2),
-            'average_profit_per_trade': round(sum(trade['profit'] for trade in trades) / len(trades), 2) if trades else 0,
+            'total_profit': round(total_profit_account, 2),
+            'average_profit_per_trade': round(total_profit_account / len(trades), 2) if trades else 0,
             'final_portfolio_value': round(portfolio_value, 2)
         }
 
