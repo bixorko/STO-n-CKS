@@ -88,6 +88,8 @@ class XAUUSDTradingStrategy:
         return self.send(parameters)
     
     def getChartLastRequest(self):
+        self.login()
+
         parameters = {
             "command": "getChartLastRequest",
             "arguments": {
@@ -100,6 +102,32 @@ class XAUUSDTradingStrategy:
         }
 
         return self.send(parameters)
+    
+    def execute_trade_transaction(self, cmd, stop_loss, take_profit, volume):
+        self.login()
+
+        parameters = {
+            "command": "tradeTransaction",
+            "arguments": {
+                "tradeTransInfo": {
+                    "cmd": cmd,  # 0 for buy, 1 for sell
+                    "symbol": self.symbol,
+                    "price": 1, # needs to be in arguments, however with direct buy / sell command (0/1) is this attribute ignored and the current bid / ask price is used
+                    "sl": round(stop_loss, 2),
+                    "tp": round(take_profit, 2),
+                    "volume": volume
+                }
+            }
+        }
+
+        response = self.send(parameters)
+        if response.get('status', False):
+            self.logger.info(f"Trade executed successfully: {response}")
+        else:
+            self.logger.error(f"Trade execution failed: {response}")
+
+        return response
+
     
     def normalize_price_data(self, rate_info):
         """
@@ -119,7 +147,6 @@ class XAUUSDTradingStrategy:
 
     def fetch_historical_data(self):
         try:
-            data = self.login()
             data = self.getChartLastRequest()
 
             if not data.get('status', False):
@@ -377,7 +404,24 @@ Position Size: {signals['position_size']:.2f}
                     self.logger.info(f"Strategy Performance: {performance}")
 
                     latest_signals = self.generate_trade_signals(historical_data)
-                    if latest_signals['long_condition'] or latest_signals['short_condition']:
+                    if latest_signals['long_condition']:
+                        # Execute a buy (long) trade
+                        self.execute_trade_transaction(
+                            cmd=0,
+                            stop_loss=latest_signals['stop_loss'],
+                            take_profit=latest_signals['take_profit'],
+                            volume=0.01 # ~125 eur
+                        )
+                        await self.send_discord_alert(signals=latest_signals)
+
+                    elif latest_signals['short_condition']:
+                        # Execute a sell (short) trade
+                        self.execute_trade_transaction(
+                            cmd=1,
+                            stop_loss=latest_signals['stop_loss'],
+                            take_profit=latest_signals['take_profit'],
+                            volume=0.01 # ~125 eur
+                        )
                         await self.send_discord_alert(signals=latest_signals)
 
                 await asyncio.sleep(self.run_interval)
