@@ -1,12 +1,26 @@
 import sys
 import os
 import asyncio
-import yfinance as yf
+import pandas as pd
 import ta
 import logging
 import discord
 import traceback
 from datetime import datetime
+import socket
+import ssl
+import json
+
+HOST = 'xapi.xtb.com'
+PORT = 5124
+END = b'\n\n'
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((HOST, PORT))
+
+context = ssl.create_default_context()
+
+s = context.wrap_socket(sock, server_hostname=HOST)
 
 # Use SelectorEventLoop on Windows
 if sys.platform.startswith('win'):
@@ -16,10 +30,12 @@ class XAUUSDTradingStrategy:
     def __init__(self, 
                  client,
                  channel_id,
-                 symbol='GC=F', 
-                 timeframe='30m', 
+                 xtb_user_id,
+                 xtb_password,
+                 symbol='GOLD', 
+                 timeframe=30, 
                  initial_capital=500,
-                 run_interval=1800,  # Default 0.5 hour interval
+                 run_interval=1800,
                  leverage=20):
         logging.basicConfig(level=logging.INFO, 
                             format='%(asctime)s - %(levelname)s: %(message)s')
@@ -27,6 +43,8 @@ class XAUUSDTradingStrategy:
         
         self.client = client
         self.channel_id = channel_id
+        self.xtb_user_id = xtb_user_id
+        self.xtb_password = xtb_password
         self.symbol = symbol
         self.timeframe = timeframe
         self.capital = initial_capital
@@ -44,28 +62,110 @@ class XAUUSDTradingStrategy:
         investment_amount = max(125, self.capital * self.max_risk_per_trade)  # Minimum $125 or 2% of capital
         position_size = investment_amount / entry_price  # Position size in units
         return position_size
+    
+    def send(self, parameters):
+        packet = json.dumps(parameters)
+        s.send(packet.encode("UTF-8"))
 
-    def fetch_historical_data(self, period='1mo'):
-        try:
-            df = yf.download(self.symbol, period=period, interval=self.timeframe)
-            df = df.reset_index()
+        response = b''
+        
+        while True:
+            response += s.recv(8192)
+            if END in response:
+                break
             
+        return json.loads(response[:response.find(END)])
+
+    def login(self):  
+        parameters = {
+            "command": "login",
+            "arguments": {
+                "userId": self.xtb_user_id, 
+                "password": self.xtb_password
+            }
+        }
+
+        return self.send(parameters)
+    
+    def getChartLastRequest(self):
+        parameters = {
+            "command": "getChartLastRequest",
+            "arguments": {
+                "info": {
+                    "period": self.timeframe,
+                    "start": 1717711200000,
+                    "symbol": self.symbol
+                }
+            }
+        }
+
+        return self.send(parameters)
+    
+    def normalize_price_data(self, rate_info):
+        """
+        Normalize price data by calculating the actual close, high, and low prices
+        based on the open price and the differences provided.
+        """
+        # The `open` price with two decimal places
+        rate_info['open'] = rate_info['open'] / 100
+        
+        # Calculate actual prices using the differences
+        rate_info['close'] = rate_info['open'] + (rate_info['close'] / 100)
+        rate_info['high'] = rate_info['open'] + (rate_info['high'] / 100)
+        rate_info['low'] = rate_info['open'] + (rate_info['low'] / 100)
+        
+        return rate_info
+
+
+    def fetch_historical_data(self):
+        try:
+            data = self.login()
+            data = self.getChartLastRequest()
+
+            if not data.get('status', False):
+                raise ValueError("API returned status=False")
+
+            rate_infos = data.get('returnData', {}).get('rateInfos', [])
+            
+            if not rate_infos:
+                raise ValueError("No rateInfos data found in API response")
+
+            # Normalize the rateInfos data to calculate real prices
+            normalized_rate_infos = [self.normalize_price_data(info) for info in rate_infos]
+
+            # Convert API data to pandas DataFrame
+            df = pd.DataFrame(normalized_rate_infos)
+
+            # Map fields to match expected column names
+            df['Date'] = pd.to_datetime(df['ctm'], unit='ms')  # Convert timestamp to datetime
+            df.rename(columns={
+                'open': 'Open',
+                'close': 'Close',
+                'high': 'High',
+                'low': 'Low',
+                'vol': 'Volume'
+            }, inplace=True)
+
+            # Sort by date and set index
+            df.sort_values('Date', inplace=True)
+            df.set_index('Date', inplace=True)
+
+            # Add technical indicators
             df['ATR'] = ta.volatility.average_true_range(
                 df['High'], df['Low'], df['Close'], window=14
             )
-            
+            df['MA_10'] = df['Close'].rolling(window=10).mean()
             df['MA_50'] = df['Close'].rolling(window=50).mean()
-            df['MA_200'] = df['Close'].rolling(window=200).mean()
-            
+
             macd = ta.trend.MACD(df['Close'])
             df['MACD'] = macd.macd()
             df['MACD_signal'] = macd.macd_signal()
-            
+
             return df
         except Exception as e:
-            self.logger.error(f"Data fetch error: {e}")
+            self.logger.error(f"Error fetching API data: {e}")
             return None
-    
+
     def generate_trade_signals(self, data):
         latest = data.iloc[-1]
         signals = {
@@ -78,14 +178,14 @@ class XAUUSDTradingStrategy:
         }
         
         long_conditions = [
+            latest['Close'] > latest['MA_10'],
             latest['Close'] > latest['MA_50'],
-            latest['Close'] > latest['MA_200'],
             latest['MACD'] > latest['MACD_signal']
         ]
         
         short_conditions = [
+            latest['Close'] < latest['MA_10'],
             latest['Close'] < latest['MA_50'],
-            latest['Close'] < latest['MA_200'],
             latest['MACD'] < latest['MACD_signal']
         ]
         
@@ -118,18 +218,16 @@ class XAUUSDTradingStrategy:
         current_position = None
         total_profit_account = 0  # Track total profit at account level
         
-        for i in range(50, len(data)):
+        for i in range(10, len(data)):
             current_data = data.iloc[:i] 
             signals = self.generate_trade_signals(current_data)
             current_row = data.iloc[i]
             
             if current_position:
                 if current_position['type'] == 'long':
-                    # Check if stop loss or take profit was hit during the candle
                     if (current_row['Low'] <= current_position['stop_loss'] or 
                         current_row['High'] >= current_position['take_profit']):
                         
-                        # Determine exit price based on stop loss or take profit
                         if current_row['Low'] <= current_position['stop_loss']:
                             exit_price = current_position['stop_loss']
                             profit = (exit_price - current_position['entry']) * current_position['size']
@@ -139,8 +237,7 @@ class XAUUSDTradingStrategy:
                             profit = (exit_price - current_position['entry']) * current_position['size']
                             trade_result = 'profit'
                         
-                        # Apply leverage to profit and update portfolio value
-                        profit_account = profit * self.leverage  # Profit at account level with leverage applied
+                        profit_account = profit * self.leverage
                         portfolio_value += profit_account
                         total_profit_account += profit_account
                         
@@ -152,20 +249,16 @@ class XAUUSDTradingStrategy:
                             'result': trade_result
                         })
                         
-                        # Print trade details
                         initial_investment = current_position['entry'] * current_position['size']
-                        print(f"Trade closed: Type=Long, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
+                        print(f"{portfolio_value} Trade closed: Type=Long, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
                         
-                        # Update capital for next trades based on trade outcome
                         self.capital = portfolio_value
                         current_position = None
                 
                 elif current_position['type'] == 'short':
-                    # Check if stop loss or take profit was hit during the candle
                     if (current_row['High'] >= current_position['stop_loss'] or 
                         current_row['Low'] <= current_position['take_profit']):
                         
-                        # Determine exit price based on stop loss or take profit
                         if current_row['High'] >= current_position['stop_loss']:
                             exit_price = current_position['stop_loss']
                             profit = (current_position['entry'] - exit_price) * current_position['size']
@@ -175,8 +268,7 @@ class XAUUSDTradingStrategy:
                             profit = (current_position['entry'] - exit_price) * current_position['size']
                             trade_result = 'profit'
                         
-                        # Apply leverage to profit and update portfolio value
-                        profit_account = profit * self.leverage  # Profit at account level with leverage applied
+                        profit_account = profit * self.leverage
                         portfolio_value += profit_account
                         total_profit_account += profit_account
                         
@@ -188,15 +280,12 @@ class XAUUSDTradingStrategy:
                             'result': trade_result
                         })
                         
-                        # Print trade details
                         initial_investment = current_position['entry'] * current_position['size']
-                        print(f"Trade closed: Type=Short, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
+                        print(f"{portfolio_value} Trade closed: Type=Short, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
                         
-                        # Update capital for next trades based on trade outcome
                         self.capital = portfolio_value
                         current_position = None
             
-            # Enter new position if no current position
             if not current_position:
                 if signals['long_condition']:
                     current_position = {
@@ -232,17 +321,13 @@ class XAUUSDTradingStrategy:
             'final_portfolio_value': round(portfolio_value, 2)
         }
 
-    async def send_discord_alert(self, signals=None, performance=None, latest_data=None):
-        """
-        Send trading signal or backtest alert to Discord
-        """
+    async def send_discord_alert(self, signals=None, performance=None):
         try:
             channel = self.client.get_channel(self.channel_id)
             if not channel:
                 self.logger.error("Could not find the specified Discord channel")
                 return
 
-            # Backtest Performance Message
             if performance:
                 performance_message = f"""
 ```
@@ -259,7 +344,6 @@ Avg Profit/Trade: ${performance['average_profit_per_trade']}
 """
                 await channel.send(performance_message)
 
-            # Trading Signal Message
             if signals and (signals['long_condition'] or signals['short_condition']):
                 trade_type = 'LONG 🟢' if signals['long_condition'] else 'SHORT 🔴'
                 signal_message = f"""
@@ -282,34 +366,21 @@ Position Size: {signals['position_size']:.2f}
             self.logger.error(f"Error sending Discord alert: {e}")
 
     async def run_continuous(self):
-        """
-        Continuously run the trading strategy
-        """
         await self.client.wait_until_ready()
-        
+
         while not self.client.is_closed():
             try:
-                # Fetch historical data
                 historical_data = self.fetch_historical_data()
-                
                 if historical_data is not None:
-                    # Run backtest
                     performance = self.backtest(historical_data)
-                    
-                    # Send backtest performance to Discord
                     await self.send_discord_alert(performance=performance)
                     self.logger.info(f"Strategy Performance: {performance}")
-                    
-                    # Generate latest signals
+
                     latest_signals = self.generate_trade_signals(historical_data)
-                    
-                    # Send signal alerts to Discord
                     if latest_signals['long_condition'] or latest_signals['short_condition']:
-                        await self.send_discord_alert(signals=latest_signals, latest_data=historical_data.iloc[-1])
-                
-                # Wait before next iteration
+                        await self.send_discord_alert(signals=latest_signals)
+
                 await asyncio.sleep(self.run_interval)
-            
             except Exception as e:
                 error_message = f"""
 ```
@@ -320,44 +391,38 @@ Traceback: {traceback.format_exc()}
 ======================
 ```
 """
-                
                 channel = self.client.get_channel(self.channel_id)
                 await channel.send(error_message)
                 self.logger.error(f"Trading strategy error: {e}")
-                
-                # Wait before retrying
                 await asyncio.sleep(self.run_interval)
 
+
 def main():
-    # Discord bot setup
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
     
-    # Get environment variables
     DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
     CHANNEL_ID = int(os.getenv('DISCORD_CHANNEL_ID'))
+    XTB_USER_ID = os.getenv('XTB_USER_ID')
+    XTB_PASSWORD = os.getenv('XTB_PASSWORD')
 
-    # Create trading strategy instance
     strategy = None
 
     @client.event
     async def on_ready():
         nonlocal strategy
         print(f'Logged in as {client.user}')
-        
-        # Initialize strategy after bot is ready
         strategy = XAUUSDTradingStrategy(
             client=client,
             channel_id=CHANNEL_ID,
-            symbol='GC=F',  # Gold Futures
-            run_interval=3600  # Run every hour
+            xtb_user_id=XTB_USER_ID,
+            xtb_password=XTB_PASSWORD,
+            symbol='GOLD',
+            run_interval=1800
         )
-        
-        # Start the continuous running of the strategy
         client.loop.create_task(strategy.run_continuous())
 
-    # Run the bot
     client.run(DISCORD_TOKEN)
 
 if __name__ == "__main__":
