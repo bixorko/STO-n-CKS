@@ -22,8 +22,8 @@ jobs:
       run: |
         docker build --build-arg DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }} \
                      --build-arg DISCORD_CHANNEL_ID=${{ secrets.DISCORD_CHANNEL_ID }} \
-                     --build-arg DISCORD_CHANNEL_ID=${{ secrets.XTB_USER_ID }} \
-                     --build-arg DISCORD_CHANNEL_ID=${{ secrets.XTB_PASSWORD }} \
+                     --build-arg XTB_USER_ID=${{ secrets.XTB_USER_ID }} \
+                     --build-arg XTB_PASSWORD=${{ secrets.XTB_PASSWORD }} \
                      -t live-trading-bot:latest .
 
     - name: Login to Docker Hub
