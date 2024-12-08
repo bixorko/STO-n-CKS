@@ -22,9 +22,9 @@ context = ssl.create_default_context()
 
 s = context.wrap_socket(sock, server_hostname=HOST)
 
-# Use SelectorEventLoop on Windows
-if sys.platform.startswith('win'):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# # Use SelectorEventLoop on Windows
+# if sys.platform.startswith('win'):
+#     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 class XAUUSDTradingStrategy:
     def __init__(self, 
