@@ -399,9 +399,9 @@ Position Size: {signals['position_size']:.2f}
             try:
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
-                    performance = self.backtest(historical_data)
-                    await self.send_discord_alert(performance=performance)
-                    self.logger.info(f"Strategy Performance: {performance}")
+                    # performance = self.backtest(historical_data)
+                    # await self.send_discord_alert(performance=performance)
+                    # self.logger.info(f"Strategy Performance: {performance}")
 
                     latest_signals = self.generate_trade_signals(historical_data)
                     if latest_signals['long_condition']:
