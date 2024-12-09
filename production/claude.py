@@ -86,6 +86,18 @@ class XAUUSDTradingStrategy:
         }
 
         return self.send(parameters)
+
+    def getTrades(self):
+        self.login()
+
+        parameters = {
+            "command": "getTrades",
+            "arguments": {
+                "openedOnly": True
+            }
+        }
+
+        return self.send(parameters)
     
     def getChartLastRequest(self):
         self.login()
@@ -403,26 +415,32 @@ Position Size: {signals['position_size']:.2f}
                     # await self.send_discord_alert(performance=performance)
                     # self.logger.info(f"Strategy Performance: {performance}")
 
-                    latest_signals = self.generate_trade_signals(historical_data)
-                    if latest_signals['long_condition']:
-                        # Execute a buy (long) trade
-                        self.execute_trade_transaction(
-                            cmd=0,
-                            stop_loss=latest_signals['stop_loss'],
-                            take_profit=latest_signals['take_profit'],
-                            volume=0.01 # ~125 eur
-                        )
-                        await self.send_discord_alert(signals=latest_signals)
+                    data = self.getTrades()
+                    if not data.get('status', False):
+                        raise ValueError("API returned status=False")
+                    active_trades = data.get('returnData', {})
+                    
+                    if not active_trades:
+                        latest_signals = self.generate_trade_signals(historical_data)
+                        if latest_signals['long_condition']:
+                            # Execute a buy (long) trade
+                            self.execute_trade_transaction(
+                                cmd=0,
+                                stop_loss=latest_signals['stop_loss'],
+                                take_profit=latest_signals['take_profit'],
+                                volume=0.01 # ~125 eur
+                            )
+                            await self.send_discord_alert(signals=latest_signals)
 
-                    elif latest_signals['short_condition']:
-                        # Execute a sell (short) trade
-                        self.execute_trade_transaction(
-                            cmd=1,
-                            stop_loss=latest_signals['stop_loss'],
-                            take_profit=latest_signals['take_profit'],
-                            volume=0.01 # ~125 eur
-                        )
-                        await self.send_discord_alert(signals=latest_signals)
+                        elif latest_signals['short_condition']:
+                            # Execute a sell (short) trade
+                            self.execute_trade_transaction(
+                                cmd=1,
+                                stop_loss=latest_signals['stop_loss'],
+                                take_profit=latest_signals['take_profit'],
+                                volume=0.01 # ~125 eur
+                            )
+                            await self.send_discord_alert(signals=latest_signals)
 
                 await asyncio.sleep(self.run_interval)
             except Exception as e:
