@@ -6,7 +6,7 @@ import ta
 import logging
 import discord
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 import socket
 import ssl
 import json
@@ -409,6 +409,20 @@ Position Size: {signals['position_size']:.2f}
 
         while not self.client.is_closed():
             try:
+                now = datetime.now()
+                # Calculate the next scheduled time
+                next_run_minute = 30 if now.minute < 30 else 0
+                next_run_hour = now.hour if now.minute < 30 else (now.hour + 1) % 24
+                next_run_second = 32 if next_run_minute == 30 else 2
+
+                next_run = now.replace(hour=next_run_hour, minute=next_run_minute, second=next_run_second, microsecond=0)
+                if next_run < now:
+                    next_run += timedelta(hours=1)
+
+                wait_time = (next_run - now).total_seconds()
+                self.logger.info(f"Waiting for the next scheduled time: {next_run}")
+                await asyncio.sleep(wait_time)
+
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
                     # performance = self.backtest(historical_data)
@@ -442,7 +456,6 @@ Position Size: {signals['position_size']:.2f}
                             )
                             await self.send_discord_alert(signals=latest_signals)
 
-                await asyncio.sleep(self.run_interval)
             except Exception as e:
                 error_message = f"""
 ```
