@@ -6,7 +6,7 @@ import ta
 import logging
 import discord
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 import socket
 import ssl
 import json
@@ -35,7 +35,6 @@ class XAUUSDTradingStrategy:
                  symbol='GOLD', 
                  timeframe=30, 
                  initial_capital=500,
-                 run_interval=1800,
                  leverage=20):
         logging.basicConfig(level=logging.INFO, 
                             format='%(asctime)s - %(levelname)s: %(message)s')
@@ -48,7 +47,6 @@ class XAUUSDTradingStrategy:
         self.symbol = symbol
         self.timeframe = timeframe
         self.capital = initial_capital
-        self.run_interval = run_interval
         self.leverage = leverage
         
         # Strict 2% risk per trade
@@ -404,11 +402,33 @@ Position Size: {signals['position_size']:.2f}
         except Exception as e:
             self.logger.error(f"Error sending Discord alert: {e}")
 
+    async def wait_until_next_scheduled_time(self):
+        while True:
+            now = datetime.now()
+            
+            if now.minute < 30 or now.minute > 30:
+                target_time = now.replace(minute=0, second=2, microsecond=0)
+                if now.minute > 30:
+                    target_time += timedelta(hours=1)
+            else:
+                target_time = now.replace(minute=30, second=2, microsecond=0)
+            
+            if target_time <= now:
+                target_time += timedelta(hours=1)
+            
+            wait_seconds = (target_time - now).total_seconds()
+            
+            self.logger.info(f"Next scheduled run at: {target_time}")
+            await asyncio.sleep(wait_seconds)
+            return
+
     async def run_continuous(self):
         await self.client.wait_until_ready()
 
         while not self.client.is_closed():
             try:
+                await self.wait_until_next_scheduled_time()
+
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
                     # performance = self.backtest(historical_data)
@@ -442,7 +462,6 @@ Position Size: {signals['position_size']:.2f}
                             )
                             await self.send_discord_alert(signals=latest_signals)
 
-                await asyncio.sleep(self.run_interval)
             except Exception as e:
                 error_message = f"""
 ```
@@ -456,7 +475,6 @@ Traceback: {traceback.format_exc()}
                 channel = self.client.get_channel(self.channel_id)
                 await channel.send(error_message)
                 self.logger.error(f"Trading strategy error: {e}")
-                await asyncio.sleep(self.run_interval)
 
 
 def main():
@@ -481,7 +499,6 @@ def main():
             xtb_user_id=XTB_USER_ID,
             xtb_password=XTB_PASSWORD,
             symbol='GOLD',
-            run_interval=1800
         )
         client.loop.create_task(strategy.run_continuous())
 
