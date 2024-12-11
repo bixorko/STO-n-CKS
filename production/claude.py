@@ -6,7 +6,7 @@ import ta
 import logging
 import discord
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 import socket
 import ssl
 import json
@@ -408,7 +408,7 @@ Position Size: {signals['position_size']:.2f}
         while not self.client.is_closed():
             try:
                 # Calculate the current time and target time for the next execution
-                now = datetime.datetime.now()
+                now = datetime.now()
                 minute = 30 if now.minute < 30 else 0  # Next target minute
                 next_run = now.replace(minute=minute, second=2, microsecond=0)
                 if now >= next_run:  # If the next run time has already passed, move to the next period
