@@ -409,6 +409,18 @@ Position Size: {signals['position_size']:.2f}
 
         while not self.client.is_closed():
             try:
+                # Calculate the current time and target time for the next execution
+                now = datetime.datetime.now()
+                minute = 30 if now.minute < 30 else 0  # Next target minute
+                next_run = now.replace(minute=minute, second=2, microsecond=0)
+                if now >= next_run:  # If the next run time has already passed, move to the next period
+                    next_run += datetime.timedelta(minutes=30)
+
+                # Calculate the delay until the next execution
+                delay = (next_run - now).total_seconds()
+                await asyncio.sleep(delay)
+
+                # Execute the trading logic
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
                     # performance = self.backtest(historical_data)
@@ -441,8 +453,6 @@ Position Size: {signals['position_size']:.2f}
                                 volume=0.01 # ~125 eur
                             )
                             await self.send_discord_alert(signals=latest_signals)
-
-                await asyncio.sleep(self.run_interval)
             except Exception as e:
                 error_message = f"""
 ```
@@ -456,8 +466,6 @@ Traceback: {traceback.format_exc()}
                 channel = self.client.get_channel(self.channel_id)
                 await channel.send(error_message)
                 self.logger.error(f"Trading strategy error: {e}")
-                await asyncio.sleep(self.run_interval)
-
 
 def main():
     intents = discord.Intents.default()
