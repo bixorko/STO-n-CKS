@@ -402,33 +402,23 @@ Position Size: {signals['position_size']:.2f}
         except Exception as e:
             self.logger.error(f"Error sending Discord alert: {e}")
 
-    async def wait_until_next_scheduled_time(self):
-        while True:
-            now = datetime.now()
-            
-            if now.minute < 30 or now.minute > 30:
-                target_time = now.replace(minute=0, second=2, microsecond=0)
-                if now.minute > 30:
-                    target_time += timedelta(hours=1)
-            else:
-                target_time = now.replace(minute=30, second=2, microsecond=0)
-            
-            if target_time <= now:
-                target_time += timedelta(hours=1)
-            
-            wait_seconds = (target_time - now).total_seconds()
-            
-            self.logger.info(f"Next scheduled run at: {target_time}")
-            await asyncio.sleep(wait_seconds)
-            return
-
     async def run_continuous(self):
         await self.client.wait_until_ready()
 
         while not self.client.is_closed():
             try:
-                await self.wait_until_next_scheduled_time()
+                # Calculate the current time and target time for the next execution
+                now = datetime.datetime.now()
+                minute = 30 if now.minute < 30 else 0  # Next target minute
+                next_run = now.replace(minute=minute, second=2, microsecond=0)
+                if now >= next_run:  # If the next run time has already passed, move to the next period
+                    next_run += datetime.timedelta(minutes=30)
 
+                # Calculate the delay until the next execution
+                delay = (next_run - now).total_seconds()
+                await asyncio.sleep(delay)
+
+                # Execute the trading logic
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
                     # performance = self.backtest(historical_data)
@@ -461,7 +451,6 @@ Position Size: {signals['position_size']:.2f}
                                 volume=0.01 # ~125 eur
                             )
                             await self.send_discord_alert(signals=latest_signals)
-
             except Exception as e:
                 error_message = f"""
 ```
@@ -475,7 +464,6 @@ Traceback: {traceback.format_exc()}
                 channel = self.client.get_channel(self.channel_id)
                 await channel.send(error_message)
                 self.logger.error(f"Trading strategy error: {e}")
-
 
 def main():
     intents = discord.Intents.default()
