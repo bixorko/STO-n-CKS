@@ -6,7 +6,7 @@ import ta
 import logging
 import discord
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 import socket
 import ssl
 import json
@@ -412,7 +412,7 @@ Position Size: {signals['position_size']:.2f}
                 minute = 30 if now.minute < 30 else 0  # Next target minute
                 next_run = now.replace(minute=minute, second=2, microsecond=0)
                 if now >= next_run:  # If the next run time has already passed, move to the next period
-                    next_run += datetime.timedelta(minutes=30)
+                    next_run += timedelta(minutes=30)
 
                 # Calculate the delay until the next execution
                 delay = (next_run - now).total_seconds()
