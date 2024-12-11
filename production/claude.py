@@ -6,7 +6,7 @@ import ta
 import logging
 import discord
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 import socket
 import ssl
 import json
@@ -35,7 +35,6 @@ class XAUUSDTradingStrategy:
                  symbol='GOLD', 
                  timeframe=30, 
                  initial_capital=500,
-                 run_interval=1800,
                  leverage=20):
         logging.basicConfig(level=logging.INFO, 
                             format='%(asctime)s - %(levelname)s: %(message)s')
@@ -48,7 +47,6 @@ class XAUUSDTradingStrategy:
         self.symbol = symbol
         self.timeframe = timeframe
         self.capital = initial_capital
-        self.run_interval = run_interval
         self.leverage = leverage
         
         # Strict 2% risk per trade
@@ -489,7 +487,6 @@ def main():
             xtb_user_id=XTB_USER_ID,
             xtb_password=XTB_PASSWORD,
             symbol='GOLD',
-            run_interval=1800
         )
         client.loop.create_task(strategy.run_continuous())
 
