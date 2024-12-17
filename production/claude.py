@@ -353,8 +353,8 @@ class XAUUSDTradingStrategy:
             try:
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
-                    performance = self.backtest(historical_data)
-                    self.logger.info(f"Strategy Performance: {performance}")
+                    # performance = self.backtest(historical_data)
+                    # self.logger.info(f"Strategy Performance: {performance}")
 
                     data = self.getTrades()
                     if not data.get('status', False):
