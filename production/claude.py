@@ -4,7 +4,6 @@ import ta
 import logging
 import socket
 import ssl
-from datetime import datetime, timedelta
 import time
 import json
 
@@ -349,24 +348,7 @@ class XAUUSDTradingStrategy:
             'final_portfolio_value': round(portfolio_value, 2)
         }
     
-    def align_to_next_run_time(self):
-        now = datetime.now()
-
-        next_half_hour = now.replace(second=2, microsecond=0)
-
-        if now.minute < 30:
-            next_half_hour = next_half_hour.replace(minute=30)
-        elif now.minute >= 30:
-            next_half_hour = next_half_hour + timedelta(hours=1)
-            next_half_hour = next_half_hour.replace(minute=0)
-
-        sleep_duration = (next_half_hour - now).total_seconds()
-        print(f"Sleeping for {sleep_duration:.2f} seconds to align to {next_half_hour}")
-        time.sleep(sleep_duration)
-
-    def run(self):
-        self.align_to_next_run_time()
-        
+    def run(self):     
         while True:
             try:
                 historical_data = self.fetch_historical_data()
