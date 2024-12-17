@@ -1,14 +1,11 @@
-import sys
 import os
-import asyncio
 import pandas as pd
 import ta
 import logging
-import discord
-import traceback
-from datetime import datetime
 import socket
 import ssl
+from datetime import datetime, timedelta
+import time
 import json
 
 HOST = 'xapi.xtb.com'
@@ -22,14 +19,8 @@ context = ssl.create_default_context()
 
 s = context.wrap_socket(sock, server_hostname=HOST)
 
-# # Use SelectorEventLoop on Windows
-# if sys.platform.startswith('win'):
-#     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 class XAUUSDTradingStrategy:
     def __init__(self, 
-                 client,
-                 channel_id,
                  xtb_user_id,
                  xtb_password,
                  symbol='GOLD', 
@@ -41,8 +32,6 @@ class XAUUSDTradingStrategy:
                             format='%(asctime)s - %(levelname)s: %(message)s')
         self.logger = logging.getLogger(__name__)
         
-        self.client = client
-        self.channel_id = channel_id
         self.xtb_user_id = xtb_user_id
         self.xtb_password = xtb_password
         self.symbol = symbol
@@ -52,7 +41,7 @@ class XAUUSDTradingStrategy:
         self.leverage = leverage
         
         # Strict 2% risk per trade
-        self.max_risk_per_trade = 0.02
+        self.max_risk_per_trade = 1
         self.risk_reward_ratio = 1
 
     def calculate_position_size(self, entry_price):
@@ -359,61 +348,31 @@ class XAUUSDTradingStrategy:
             'average_profit_per_trade': round(total_profit_account / len(trades), 2) if trades else 0,
             'final_portfolio_value': round(portfolio_value, 2)
         }
+    
+    def align_to_next_run_time(self):
+        now = datetime.now()
 
-    async def send_discord_alert(self, signals=None, performance=None):
-        try:
-            channel = self.client.get_channel(self.channel_id)
-            if not channel:
-                self.logger.error("Could not find the specified Discord channel")
-                return
+        next_half_hour = now.replace(second=2, microsecond=0)
 
-            if performance:
-                performance_message = f"""
-```
-📊 Backtest Performance Report 📈
-======================
-Total Return: {performance['total_return_percentage']}%
-Total Trades: {performance['total_trades']}
-Profitable Trades: {performance['profitable_trades']}
-Win Rate: {performance['win_rate']}%
-Total Profit: ${performance['total_profit']}
-Avg Profit/Trade: ${performance['average_profit_per_trade']}
-======================
-```
-"""
-                await channel.send(performance_message)
+        if now.minute < 30:
+            next_half_hour = next_half_hour.replace(minute=30)
+        elif now.minute >= 30:
+            next_half_hour = next_half_hour + timedelta(hours=1)
+            next_half_hour = next_half_hour.replace(minute=0)
 
-            if signals and (signals['long_condition'] or signals['short_condition']):
-                trade_type = 'LONG 🟢' if signals['long_condition'] else 'SHORT 🔴'
-                signal_message = f"""
-```
-Stock Signal Alert 🚀
-======================
-Stock: {self.symbol} 🌟
-Date: {datetime.now().strftime('%Y-%m-%d')}
-Trade Type: {trade_type}
-Opening Price: ${signals['entry_price']:.2f} 💸
-Take Profit (TP): ${signals['take_profit']:.2f} 🍋
-Stop Loss (SL): ${signals['stop_loss']:.2f} ⚠️
-Position Size: {signals['position_size']:.2f}
-======================
-```
-"""
-                await channel.send(signal_message)
+        sleep_duration = (next_half_hour - now).total_seconds()
+        print(f"Sleeping for {sleep_duration:.2f} seconds to align to {next_half_hour}")
+        time.sleep(sleep_duration)
 
-        except Exception as e:
-            self.logger.error(f"Error sending Discord alert: {e}")
-
-    async def run_continuous(self):
-        await self.client.wait_until_ready()
-
-        while not self.client.is_closed():
+    def run(self):
+        self.align_to_next_run_time()
+        
+        while True:
             try:
                 historical_data = self.fetch_historical_data()
                 if historical_data is not None:
-                    # performance = self.backtest(historical_data)
-                    # await self.send_discord_alert(performance=performance)
-                    # self.logger.info(f"Strategy Performance: {performance}")
+                    performance = self.backtest(historical_data)
+                    self.logger.info(f"Strategy Performance: {performance}")
 
                     data = self.getTrades()
                     if not data.get('status', False):
@@ -430,7 +389,7 @@ Position Size: {signals['position_size']:.2f}
                                 take_profit=latest_signals['take_profit'],
                                 volume=0.01 # ~125 eur
                             )
-                            await self.send_discord_alert(signals=latest_signals)
+                            self.logger.info(f"LONG SIGNAL: {latest_signals['long_condition']}")
 
                         elif latest_signals['short_condition']:
                             # Execute a sell (short) trade
@@ -440,52 +399,25 @@ Position Size: {signals['position_size']:.2f}
                                 take_profit=latest_signals['take_profit'],
                                 volume=0.01 # ~125 eur
                             )
-                            await self.send_discord_alert(signals=latest_signals)
+                            self.logger.info(f"SHORT SIGNAL: {latest_signals['short_condition']}")
+                time.sleep(self.run_interval)
 
-                await asyncio.sleep(self.run_interval)
             except Exception as e:
-                error_message = f"""
-```
-❌ Trading Strategy Error ❌
-======================
-Error: {str(e)}
-Traceback: {traceback.format_exc()}
-======================
-```
-"""
-                channel = self.client.get_channel(self.channel_id)
-                await channel.send(error_message)
                 self.logger.error(f"Trading strategy error: {e}")
-                await asyncio.sleep(self.run_interval)
-
+                time.sleep(self.run_interval)
 
 def main():
-    intents = discord.Intents.default()
-    intents.message_content = True
-    client = discord.Client(intents=intents)
-    
-    DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-    CHANNEL_ID = int(os.getenv('DISCORD_CHANNEL_ID'))
     XTB_USER_ID = os.getenv('XTB_USER_ID')
     XTB_PASSWORD = os.getenv('XTB_PASSWORD')
 
-    strategy = None
+    strategy = XAUUSDTradingStrategy(
+        xtb_user_id=XTB_USER_ID,
+        xtb_password=XTB_PASSWORD,
+        symbol='GOLD',
+        run_interval=1800
+    )
 
-    @client.event
-    async def on_ready():
-        nonlocal strategy
-        print(f'Logged in as {client.user}')
-        strategy = XAUUSDTradingStrategy(
-            client=client,
-            channel_id=CHANNEL_ID,
-            xtb_user_id=XTB_USER_ID,
-            xtb_password=XTB_PASSWORD,
-            symbol='GOLD',
-            run_interval=1800
-        )
-        client.loop.create_task(strategy.run_continuous())
-
-    client.run(DISCORD_TOKEN)
+    strategy.run()
 
 if __name__ == "__main__":
     main()
