@@ -41,7 +41,7 @@ class XAUUSDTradingStrategy:
         self.leverage = leverage
         
         # Strict 2% risk per trade
-        self.max_risk_per_trade = 1
+        self.max_risk_per_trade = 0.02
         self.risk_reward_ratio = 1
 
     def calculate_position_size(self, entry_price):
