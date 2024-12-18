@@ -8,7 +8,7 @@ import time
 import json
 
 HOST = 'xapi.xtb.com'
-PORT = 5124
+PORT = 5112
 END = b'\n\n'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -369,7 +369,7 @@ class XAUUSDTradingStrategy:
                                 cmd=0,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.01 # ~125 eur
+                                volume=0.03
                             )
                             self.logger.info(f"LONG SIGNAL: {latest_signals['long_condition']}")
 
@@ -379,7 +379,7 @@ class XAUUSDTradingStrategy:
                                 cmd=1,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.01 # ~125 eur
+                                volume=0.03
                             )
                             self.logger.info(f"SHORT SIGNAL: {latest_signals['short_condition']}")
                 time.sleep(self.run_interval)
