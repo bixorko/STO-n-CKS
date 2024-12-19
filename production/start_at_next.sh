@@ -8,11 +8,10 @@ calculate_next_time() {
 
     # Determine the next closest time: XX:00:02 or XX:30:02
     if [ "$CURRENT_MIN" -lt 30 ]; then
-        TARGET_MIN="00"
-    else
-        # If past 30 minutes, go to the next hour
         TARGET_MIN="30"
-        CURRENT_HOUR=$(printf "%02d" $((10#$CURRENT_HOUR + 1)))
+    else
+        TARGET_MIN="00"
+        CURRENT_HOUR=$(date -d "$CURRENT_HOUR:00 + 1 hour" +%H) # Increment hour safely
     fi
 
     # Construct the full timestamp for the next trigger time
@@ -21,7 +20,7 @@ calculate_next_time() {
     # Calculate the wait time
     WAIT_TIME=$((TARGET_TIME_STR - CURRENT_TIME))
 
-    # Ensure wait time is not negative
+    # Ensure wait time is not negative (safety check)
     if [ $WAIT_TIME -lt 0 ]; then
         WAIT_TIME=0
     fi
