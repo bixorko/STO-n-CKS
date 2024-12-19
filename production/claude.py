@@ -249,6 +249,26 @@ class XAUUSDTradingStrategy:
             current_data = data.iloc[:i] 
             signals = self.generate_trade_signals(current_data)
             current_row = data.iloc[i]
+
+            if not current_position:
+                if signals['long_condition']:
+                    current_position = {
+                        'type': 'long',
+                        'entry': signals['entry_price'],
+                        'stop_loss': signals['stop_loss'],
+                        'take_profit': signals['take_profit'],
+                        'size': signals['position_size']
+                    }
+                    print(f"New long position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
+                elif signals['short_condition']:
+                    current_position = {
+                        'type': 'short',
+                        'entry': signals['entry_price'],
+                        'stop_loss': signals['stop_loss'],
+                        'take_profit': signals['take_profit'],
+                        'size': signals['position_size']
+                    }
+                    print(f"New short position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
             
             if current_position:
                 if current_position['type'] == 'long':
@@ -313,26 +333,6 @@ class XAUUSDTradingStrategy:
                         self.capital = portfolio_value
                         current_position = None
             
-            if not current_position:
-                if signals['long_condition']:
-                    current_position = {
-                        'type': 'long',
-                        'entry': signals['entry_price'],
-                        'stop_loss': signals['stop_loss'],
-                        'take_profit': signals['take_profit'],
-                        'size': signals['position_size']
-                    }
-                    print(f"New long position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
-                elif signals['short_condition']:
-                    current_position = {
-                        'type': 'short',
-                        'entry': signals['entry_price'],
-                        'stop_loss': signals['stop_loss'],
-                        'take_profit': signals['take_profit'],
-                        'size': signals['position_size']
-                    }
-                    print(f"New short position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
-        
         total_return = (portfolio_value - initial_capital) / initial_capital * 100
         profitable_trades = [trade for trade in trades if trade['result'] == 'profit']
         losing_trades = [trade for trade in trades if trade['result'] == 'loss']
