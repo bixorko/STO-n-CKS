@@ -184,9 +184,20 @@ class XAUUSDTradingStrategy:
             df['MA_10'] = df['Close'].rolling(window=10).mean()
             df['MA_50'] = df['Close'].rolling(window=50).mean()
 
-            macd = ta.trend.MACD(df['Close'])
+            macd = ta.trend.MACD(df['Close'], window_slow=26, window_fast=12, window_sign=9)
             df['MACD'] = macd.macd()
             df['MACD_signal'] = macd.macd_signal()
+            df['MACD_hist'] = macd.macd_diff()
+
+            # Momentum indicators
+            df['Stoch_K'] = ta.momentum.stoch(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
+            df['Stoch_D'] = df['Stoch_K'].rolling(window=3).mean()
+
+            # Volume indicators
+            df['OBV'] = ta.volume.on_balance_volume(df['Close'], df['Volume'])
+
+            # Volatility ratio for market regime detection
+            df['Volatility_Ratio'] = df['ATR'] / df['Close'] * 100
 
             return df
         except Exception as e:
@@ -201,40 +212,87 @@ class XAUUSDTradingStrategy:
             'entry_price': None,
             'stop_loss': None,
             'take_profit': None,
-            'position_size': 0
+            'position_size': 0,
+            'signal_strength': 0  # New field for signal strength
         }
         
+        # Market regime detection
+        is_volatile = latest['Volatility_Ratio'] > 1.5
+        
+        # Base conditions
         long_conditions = [
             latest['Close'] > latest['MA_10'],
             latest['Close'] > latest['MA_50'],
-            latest['MACD'] > latest['MACD_signal']
+            latest['MACD'] > latest['MACD_signal'],
+            latest['Stoch_K'] > latest['Stoch_D'],
+            latest['OBV'] > data['OBV'].rolling(window=20).mean().iloc[-1]  # Volume confirmation
         ]
         
         short_conditions = [
             latest['Close'] < latest['MA_10'],
             latest['Close'] < latest['MA_50'],
-            latest['MACD'] < latest['MACD_signal']
+            latest['MACD'] < latest['MACD_signal'],
+            latest['Stoch_K'] < latest['Stoch_D'],
+            latest['OBV'] < data['OBV'].rolling(window=20).mean().iloc[-1]  # Volume confirmation
         ]
+        
+        # Dynamic ATR multiplier based on volatility
+        atr_multiplier = 1.5
+        if is_volatile:
+            atr_multiplier = 2.0
+        
+        # Calculate signal strength (0-100)
+        def calculate_signal_strength(conditions, latest_data):
+            base_strength = sum(conditions) / len(conditions) * 100
+            
+            # Additional strength factors
+            momentum_factor = min(abs(latest_data['MACD_hist']) / 0.001 * 10, 20)
+            volume_factor = min((latest_data['Volume'] / data['Volume'].rolling(window=20).mean().iloc[-1] - 1) * 20, 20)
+            trend_strength = min(abs(latest_data['Close'] - latest_data['MA_50']) / latest_data['ATR'] * 5, 20)
+            
+            return min(base_strength + momentum_factor + volume_factor + trend_strength, 100)
         
         if all(long_conditions):
             signals['long_condition'] = True
             signals['entry_price'] = latest['Close']
-            signals['stop_loss'] = latest['Low'] - latest['ATR'] * 1.5
+            signals['stop_loss'] = latest['Low'] - latest['ATR'] * atr_multiplier
+            
+            # Dynamic risk-reward ratio based on signal strength
+            signal_strength = calculate_signal_strength(long_conditions, latest)
+            signals['signal_strength'] = signal_strength
+            dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
+            
             signals['take_profit'] = (
                 signals['entry_price'] + 
-                (signals['entry_price'] - signals['stop_loss']) * self.risk_reward_ratio
+                (signals['entry_price'] - signals['stop_loss']) * dynamic_rr_ratio
             )
-            signals['position_size'] = self.calculate_position_size(signals['entry_price'])
+            
+            # Position sizing based on signal strength and volatility
+            base_position = self.calculate_position_size(signals['entry_price'])
+            signals['position_size'] = base_position * (0.5 + (signal_strength / 200))
+            
+            if is_volatile:
+                signals['position_size'] *= 0.8  # Reduce position size in volatile conditions
         
         if all(short_conditions):
             signals['short_condition'] = True
             signals['entry_price'] = latest['Close']
-            signals['stop_loss'] = latest['High'] + latest['ATR'] * 1.5
+            signals['stop_loss'] = latest['High'] + latest['ATR'] * atr_multiplier
+            
+            signal_strength = calculate_signal_strength(short_conditions, latest)
+            signals['signal_strength'] = signal_strength
+            dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
+            
             signals['take_profit'] = (
                 signals['entry_price'] - 
-                (signals['stop_loss'] - signals['entry_price']) * self.risk_reward_ratio
+                (signals['stop_loss'] - signals['entry_price']) * dynamic_rr_ratio
             )
-            signals['position_size'] = self.calculate_position_size(signals['entry_price'])
+            
+            base_position = self.calculate_position_size(signals['entry_price'])
+            signals['position_size'] = base_position * (0.5 + (signal_strength / 200))
+            
+            if is_volatile:
+                signals['position_size'] *= 0.8
         
         return signals
     
