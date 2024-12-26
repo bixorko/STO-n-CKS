@@ -427,7 +427,7 @@ class XAUUSDTradingStrategy:
                                 cmd=0,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.03
+                                volume=0.04
                             )
                             self.logger.info(f"LONG SIGNAL: {latest_signals['long_condition']}")
 
