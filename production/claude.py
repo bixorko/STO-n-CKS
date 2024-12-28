@@ -301,12 +301,15 @@ class XAUUSDTradingStrategy:
         portfolio_value = initial_capital
         trades = []
         current_position = None
-        total_profit_account = 0  # Track total profit at account level
+        total_profit_account = 0
+        total_days_in_long = 0
+        total_days_in_short = 0
         
         for i in range(10, len(data)):
             current_data = data.iloc[:i] 
             signals = self.generate_trade_signals(current_data)
             current_row = data.iloc[i]
+            current_date = current_row.name
 
             if not current_position:
                 if signals['long_condition']:
@@ -315,7 +318,8 @@ class XAUUSDTradingStrategy:
                         'entry': signals['entry_price'],
                         'stop_loss': signals['stop_loss'],
                         'take_profit': signals['take_profit'],
-                        'size': signals['position_size']
+                        'size': signals['position_size'],
+                        'entry_date': current_date
                     }
                     print(f"New long position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
                 elif signals['short_condition']:
@@ -324,7 +328,8 @@ class XAUUSDTradingStrategy:
                         'entry': signals['entry_price'],
                         'stop_loss': signals['stop_loss'],
                         'take_profit': signals['take_profit'],
-                        'size': signals['position_size']
+                        'size': signals['position_size'],
+                        'entry_date': current_date
                     }
                     print(f"New short position: Entry={signals['entry_price']}, Stop Loss={signals['stop_loss']}, Take Profit={signals['take_profit']}, Position Size={signals['position_size']}")
             
@@ -333,6 +338,9 @@ class XAUUSDTradingStrategy:
                     if (current_row['Low'] <= current_position['stop_loss'] or 
                         current_row['High'] >= current_position['take_profit']):
                         
+                        duration_days = (current_date - current_position['entry_date']).days
+                        total_days_in_long += duration_days
+
                         if current_row['Low'] <= current_position['stop_loss']:
                             exit_price = current_position['stop_loss']
                             profit = (exit_price - current_position['entry']) * current_position['size']
@@ -351,11 +359,13 @@ class XAUUSDTradingStrategy:
                             'entry': current_position['entry'],
                             'exit': exit_price,
                             'profit': profit_account,
-                            'result': trade_result
+                            'result': trade_result,
+                            'duration_days': duration_days,
+                            'entry_date': current_position['entry_date'],
+                            'exit_date': current_date
                         })
                         
-                        initial_investment = current_position['entry'] * current_position['size']
-                        print(f"{portfolio_value} Trade closed: Type=Long, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
+                        print(f"Trade closed: Type=Long, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Duration={duration_days} days")
                         
                         self.capital = portfolio_value
                         current_position = None
@@ -364,6 +374,10 @@ class XAUUSDTradingStrategy:
                     if (current_row['High'] >= current_position['stop_loss'] or 
                         current_row['Low'] <= current_position['take_profit']):
                         
+                        # Calculate trade duration
+                        duration_days = (current_date - current_position['entry_date']).days
+                        total_days_in_short += duration_days
+
                         if current_row['High'] >= current_position['stop_loss']:
                             exit_price = current_position['stop_loss']
                             profit = (current_position['entry'] - exit_price) * current_position['size']
@@ -382,11 +396,13 @@ class XAUUSDTradingStrategy:
                             'entry': current_position['entry'],
                             'exit': exit_price,
                             'profit': profit_account,
-                            'result': trade_result
+                            'result': trade_result,
+                            'duration_days': duration_days,
+                            'entry_date': current_position['entry_date'],
+                            'exit_date': current_date
                         })
                         
-                        initial_investment = current_position['entry'] * current_position['size']
-                        print(f"{portfolio_value} Trade closed: Type=Short, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Initial Investment (Account)={initial_investment}")
+                        print(f"Trade closed: Type=Short, Entry={current_position['entry']}, Exit={exit_price}, Profit={profit_account}, Result={trade_result}, Duration={duration_days} days")
                         
                         self.capital = portfolio_value
                         current_position = None
@@ -394,6 +410,15 @@ class XAUUSDTradingStrategy:
         total_return = (portfolio_value - initial_capital) / initial_capital * 100
         profitable_trades = [trade for trade in trades if trade['result'] == 'profit']
         losing_trades = [trade for trade in trades if trade['result'] == 'loss']
+        
+        # Calculate average duration for all trades
+        avg_duration = sum(trade['duration_days'] for trade in trades) / len(trades) if trades else 0
+        
+        # Calculate average duration separately for long and short trades
+        long_trades = [trade for trade in trades if trade['type'] == 'long']
+        short_trades = [trade for trade in trades if trade['type'] == 'short']
+        avg_duration_long = sum(trade['duration_days'] for trade in long_trades) / len(long_trades) if long_trades else 0
+        avg_duration_short = sum(trade['duration_days'] for trade in short_trades) / len(short_trades) if short_trades else 0
         
         return {
             'total_return_percentage': round(total_return, 2),
@@ -403,7 +428,12 @@ class XAUUSDTradingStrategy:
             'win_rate': round(len(profitable_trades) / len(trades) * 100, 2) if trades else 0,
             'total_profit': round(total_profit_account, 2),
             'average_profit_per_trade': round(total_profit_account / len(trades), 2) if trades else 0,
-            'final_portfolio_value': round(portfolio_value, 2)
+            'final_portfolio_value': round(portfolio_value, 2),
+            'average_trade_duration': round(avg_duration, 2),
+            'average_long_trade_duration': round(avg_duration_long, 2),
+            'average_short_trade_duration': round(avg_duration_short, 2),
+            'total_days_in_long': total_days_in_long,
+            'total_days_in_short': total_days_in_short
         }
     
     def run(self):     
