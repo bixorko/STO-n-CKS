@@ -250,7 +250,7 @@ class XAUUSDTradingStrategy:
             volume_factor = min((latest_data['Volume'] / data['Volume'].rolling(window=20).mean().iloc[-1] - 1) * 20, 20)
             trend_strength = min(abs(latest_data['Close'] - latest_data['MA_50']) / latest_data['ATR'] * 5, 20)
             
-            return min(base_strength + momentum_factor + volume_factor + trend_strength, 100)
+            return base_strength + momentum_factor + volume_factor + trend_strength
         
         if all(long_conditions):
             signals['long_condition'] = True
@@ -282,7 +282,7 @@ class XAUUSDTradingStrategy:
             signal_strength = calculate_signal_strength(short_conditions, latest)
             signals['signal_strength'] = signal_strength
             dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
-            
+
             signals['take_profit'] = (
                 signals['entry_price'] - 
                 (signals['stop_loss'] - signals['entry_price']) * dynamic_rr_ratio
@@ -457,7 +457,7 @@ class XAUUSDTradingStrategy:
                                 cmd=0,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.04
+                                volume=0.03
                             )
                             self.logger.info(f"LONG SIGNAL: {latest_signals['long_condition']}")
 
@@ -467,7 +467,7 @@ class XAUUSDTradingStrategy:
                                 cmd=1,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.04
+                                volume=0.03
                             )
                             self.logger.info(f"SHORT SIGNAL: {latest_signals['short_condition']}")
                 time.sleep(self.run_interval)
