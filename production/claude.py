@@ -268,11 +268,7 @@ class XAUUSDTradingStrategy:
             )
             
             # Position sizing based on signal strength and volatility
-            base_position = self.calculate_position_size(signals['entry_price'])
-            signals['position_size'] = base_position * (0.5 + (signal_strength / 200))
-            
-            if is_volatile:
-                signals['position_size'] *= 0.8  # Reduce position size in volatile conditions
+            signals['position_size'] = self.calculate_position_size(signals['entry_price'])
         
         if all(short_conditions):
             signals['short_condition'] = True
@@ -288,12 +284,8 @@ class XAUUSDTradingStrategy:
                 (signals['stop_loss'] - signals['entry_price']) * dynamic_rr_ratio
             )
             
-            base_position = self.calculate_position_size(signals['entry_price'])
-            signals['position_size'] = base_position * (0.5 + (signal_strength / 200))
-            
-            if is_volatile:
-                signals['position_size'] *= 0.8
-        
+            signals['position_size'] = self.calculate_position_size(signals['entry_price'])
+
         return signals
     
     def backtest(self, data):
