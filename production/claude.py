@@ -6,35 +6,44 @@ import socket
 import ssl
 import time
 import json
+import threading
 
 HOST = 'xapi.xtb.com'
 PORT = 5112
 END = b'\n\n'
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((HOST, PORT))
-
-context = ssl.create_default_context()
-
-s = context.wrap_socket(sock, server_hostname=HOST)
-
 class XAUUSDTradingStrategy:
     def __init__(self, 
                  xtb_user_id,
                  xtb_password,
+                 pip_value,
+                 trade_volume,
                  symbol='GOLD', 
+                 use_dynamic_rr=True,
                  timeframe=30, 
+                 chart_start_from=1717711200000,
                  initial_capital=500,
                  run_interval=1800,
                  leverage=20):
-        logging.basicConfig(level=logging.INFO, 
-                            format='%(asctime)s - %(levelname)s: %(message)s')
+        
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((HOST, PORT))
+
+        self.context = ssl.create_default_context()
+
+        self.s = self.context.wrap_socket(self.sock, server_hostname=HOST)
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
         self.logger = logging.getLogger(__name__)
         
         self.xtb_user_id = xtb_user_id
         self.xtb_password = xtb_password
         self.symbol = symbol
+        self.pip_value = pip_value
+        self.decimal_places = len(str(self.pip_value).split(".")[1]) if "." in str(self.pip_value) else 0
+        self.trade_volume = trade_volume
+        self.use_dynamic_rr = use_dynamic_rr
         self.timeframe = timeframe
+        self.chart_start_from = chart_start_from
         self.capital = initial_capital
         self.run_interval = run_interval
         self.leverage = leverage
@@ -53,12 +62,12 @@ class XAUUSDTradingStrategy:
     
     def send(self, parameters):
         packet = json.dumps(parameters)
-        s.send(packet.encode("UTF-8"))
+        self.s.send(packet.encode("UTF-8"))
 
         response = b''
         
         while True:
-            response += s.recv(8192)
+            response += self.s.recv(8192)
             if END in response:
                 break
             
@@ -95,7 +104,7 @@ class XAUUSDTradingStrategy:
             "arguments": {
                 "info": {
                     "period": self.timeframe,
-                    "start": 1717711200000,
+                    "start": self.chart_start_from,
                     "symbol": self.symbol
                 }
             }
@@ -113,8 +122,8 @@ class XAUUSDTradingStrategy:
                     "cmd": cmd,  # 0 for buy, 1 for sell
                     "symbol": self.symbol,
                     "price": 1, # needs to be in arguments, however with direct buy / sell command (0/1) is this attribute ignored and the current bid / ask price is used
-                    "sl": round(stop_loss, 2),
-                    "tp": round(take_profit, 2),
+                    "sl": round(stop_loss, self.decimal_places),
+                    "tp": round(take_profit, self.decimal_places),
                     "volume": volume
                 }
             }
@@ -135,12 +144,12 @@ class XAUUSDTradingStrategy:
         based on the open price and the differences provided.
         """
         # The `open` price with two decimal places
-        rate_info['open'] = rate_info['open'] / 100
+        rate_info['open'] = rate_info['open'] * self.pip_value
         
         # Calculate actual prices using the differences
-        rate_info['close'] = rate_info['open'] + (rate_info['close'] / 100)
-        rate_info['high'] = rate_info['open'] + (rate_info['high'] / 100)
-        rate_info['low'] = rate_info['open'] + (rate_info['low'] / 100)
+        rate_info['close'] = rate_info['open'] + (rate_info['close'] * self.pip_value)
+        rate_info['high'] = rate_info['open'] + (rate_info['high'] * self.pip_value)
+        rate_info['low'] = rate_info['open'] + (rate_info['low'] * self.pip_value)
         
         return rate_info
 
@@ -260,7 +269,10 @@ class XAUUSDTradingStrategy:
             # Dynamic risk-reward ratio based on signal strength
             signal_strength = calculate_signal_strength(long_conditions, latest)
             signals['signal_strength'] = signal_strength
-            dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
+            if self.use_dynamic_rr:
+                dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
+            else:
+                dynamic_rr_ratio = 1
             
             signals['take_profit'] = (
                 signals['entry_price'] + 
@@ -277,7 +289,10 @@ class XAUUSDTradingStrategy:
             
             signal_strength = calculate_signal_strength(short_conditions, latest)
             signals['signal_strength'] = signal_strength
-            dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
+            if self.use_dynamic_rr:
+                dynamic_rr_ratio = self.risk_reward_ratio * (1 + (signal_strength / 100))
+            else:
+                dynamic_rr_ratio = 1
 
             signals['take_profit'] = (
                 signals['entry_price'] - 
@@ -449,7 +464,7 @@ class XAUUSDTradingStrategy:
                                 cmd=0,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.03
+                                volume=self.trade_volume
                             )
                             self.logger.info(f"LONG SIGNAL: {latest_signals['long_condition']}")
 
@@ -459,7 +474,7 @@ class XAUUSDTradingStrategy:
                                 cmd=1,
                                 stop_loss=latest_signals['stop_loss'],
                                 take_profit=latest_signals['take_profit'],
-                                volume=0.03
+                                volume=self.trade_volume
                             )
                             self.logger.info(f"SHORT SIGNAL: {latest_signals['short_condition']}")
                 time.sleep(self.run_interval)
@@ -472,14 +487,35 @@ def main():
     XTB_USER_ID = os.getenv('XTB_USER_ID')
     XTB_PASSWORD = os.getenv('XTB_PASSWORD')
 
-    strategy = XAUUSDTradingStrategy(
+    strategy_gold = XAUUSDTradingStrategy(
         xtb_user_id=XTB_USER_ID,
         xtb_password=XTB_PASSWORD,
+        pip_value = 0.01,
+        trade_volume = 0.03,
         symbol='GOLD',
+        use_dynamic_rr=True,
+        timeframe=30,
+        chart_start_from=1717711200000,
         run_interval=1800
     )
 
-    strategy.run()
+    strategy_us500 = XAUUSDTradingStrategy(
+        xtb_user_id=XTB_USER_ID,
+        xtb_password=XTB_PASSWORD,
+        pip_value = 0.1,
+        trade_volume = 0.01,
+        symbol='US500',
+        use_dynamic_rr=False,
+        timeframe=240,
+        chart_start_from=1517711200000,
+        run_interval=1800
+    )
+
+    thread_gold = threading.Thread(target=strategy_gold.run)
+    thread_us500 = threading.Thread(target=strategy_us500.run)
+
+    thread_gold.start()
+    thread_us500.start()
 
 if __name__ == "__main__":
     main()
