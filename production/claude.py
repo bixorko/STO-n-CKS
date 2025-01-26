@@ -455,8 +455,12 @@ class XAUUSDTradingStrategy:
                     if not data.get('status', False):
                         raise ValueError("API returned status=False")
                     active_trades = data.get('returnData', {})
+                    has_current_symbol_active_trade = False
+                    for active_trade in active_trades:
+                        if active_trade['symbol'] == self.symbol:
+                            has_current_symbol_active_trade = True
                     
-                    if not active_trades:
+                    if not has_current_symbol_active_trade:
                         latest_signals = self.generate_trade_signals(historical_data)
                         if latest_signals['long_condition']:
                             # Execute a buy (long) trade
@@ -491,7 +495,7 @@ def main():
         xtb_user_id=XTB_USER_ID,
         xtb_password=XTB_PASSWORD,
         pip_value = 0.01,
-        trade_volume = 0.03,
+        trade_volume = 0.01,
         symbol='GOLD',
         use_dynamic_rr=True,
         timeframe=30,
